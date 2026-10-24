@@ -1,0 +1,29 @@
+# Local research inputs, runtime data and outputs
+data/
+drive_data/
+raw/
+assets/
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.geojson
+*.geojson.gz
+*.gpkg
+*.pdf
+ANALYSIS.md
+VALIDATION.md
+reports/
+audit/
+manifests/
+# Local credentials, configuration and deployment artifacts
+mapbox-config*.js
+.env
+.env.*
+.github/
+__site/
+.publish_state.json
+qa/
+.deps/
+__pycache__/
+*.log

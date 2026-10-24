@@ -1,0 +1,2 @@
+# Preserve reviewed export bytes so public hashes match the build manifest.
+* -text

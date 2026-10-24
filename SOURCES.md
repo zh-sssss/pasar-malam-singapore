@@ -1,0 +1,9 @@
+# Sources and interpretation
+
+The website uses factual announcement dates, places and reported brand appearances with source links. It does not redistribute source webpages, images, contacts or procurement material. Reported brand associations do not establish operator identity or actual travel.
+
+Geographic context derives from [HDB Existing Building](https://data.gov.sg/datasets/d_16b157c52ed637edd6ba1232e026258d/view), [HDB Property Information](https://data.gov.sg/datasets/d_17f5382f26140b1fdae0ba2ef6239d2f/view), and [URA MP2019 Planning Area Boundary](https://data.gov.sg/datasets/d_4765db0e87b9c86336792efe8a1f7a66/view), accessed 23 October 2026. The [Singapore Open Data Licence](https://data.gov.sg/open-data-licence) applies to those sources. No geographic data files are stored in this repository. This independent educational study is not endorsed by government agencies.
+
+Modelled ODA candidate zones are research scenarios, not approved ODA boundaries. The 2 m band is a modelling choice. Conditions in [SCDF clause 9.5](https://www.scdf.gov.sg/fire-safety-services-listing/fire-code-2023/table-of-content/chapter-9-additional-requirements-for-each-purpose-group/clause-9.5-purpose-group-v-occupancy) and the [Tampines application](https://www.tampines.org.sg/Resources/Documents/ResidentServices/a8ac8910ee17452f976e6c7883cc6546.pdf) cannot be fully checked without walkway, exit, shopfront and approval data.
+
+Mapbox GL JS and Mapbox Standard are loaded from the official service. Basemap and 3D context are copyright Mapbox and [OpenStreetMap contributors](https://www.openstreetmap.org/copyright). Mapbox context does not establish market footprints or surveyed ODA geometry. Service terms and attribution remain applicable. Token configuration is local and excluded from Git. Original code licensing does not relicense datasets, third-party services or brand names.
