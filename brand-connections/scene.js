@@ -40,14 +40,23 @@ const fragment=`varying float vT;uniform float uReveal;uniform float uDashes;uni
 }`;
 export function createScene(container,{land,mapboxToken,onPick,onState,reducedMotion=false}){
  if(!globalThis.mapboxgl?.supported())throw new Error('This browser does not support the WebGL map. Try a recent Chrome, Edge or Safari browser.');
- const map=new mapboxgl.Map({container,accessToken:mapboxToken||undefined,style:{version:8,sources:{island:{type:'geojson',data:land}},layers:[
-  {id:'water',type:'background',paint:{'background-color':'#b7cfe0'}},
-  {id:'island-shadow',type:'fill-extrusion',source:'island',paint:{'fill-extrusion-color':'#c1c7ca','fill-extrusion-height':100,'fill-extrusion-base':0,'fill-extrusion-opacity':1}},
-  // The supplied land may contain planning-area polygons. Outlining each
-  // polygon creates internal lines that can be mistaken for brand links.
-  {id:'island-paper',type:'fill',source:'island',paint:{'fill-color':'#f2e8cc','fill-opacity':1}}
- ]},center:ORIGIN,zoom:10.3,pitch:55,bearing:-18,antialias:true,minZoom:9,maxZoom:17,maxPitch:72,attributionControl:false});
- map.addControl(new mapboxgl.AttributionControl({compact:true,customAttribution:'Geography: URA planning areas · illustrative symbols'}),'bottom-right');
+ const map=new mapboxgl.Map({container,accessToken:mapboxToken||undefined,style:'mapbox://styles/mapbox/light-v11',center:ORIGIN,zoom:10.3,pitch:55,bearing:-18,antialias:true,minZoom:9,maxZoom:17,maxPitch:72,attributionControl:false});
+ map.addControl(new mapboxgl.AttributionControl({compact:true,customAttribution:'Illustrative brand symbols and connections'}),'bottom-right');
+ // Keep Mapbox's real roads, parks, waterways and place labels, with the
+ // chapter's paper/mint palette. Basemap roads are solid; brand arcs are dashed.
+ map.on('style.load',()=>{
+  for(const base of map.getStyle().layers){
+   if(base.type==='background')map.setPaintProperty(base.id,'background-color','#f2e8cc');
+   if(base.type==='fill'&&/^water($|-)/.test(base.id))map.setPaintProperty(base.id,'fill-color','#b7cfe0');
+   if(base.type==='fill'&&/landuse|landcover|national-park/.test(base.id)){
+    map.setPaintProperty(base.id,'fill-color',['match',['get','class'],['park','wood','grass','scrub','national_park'],'#ceddcc',['hospital','school'],'#e7dfcc','#e8e2cd']);
+   }
+   if(base.type==='symbol'&&base.layout?.['text-field']){
+    map.setPaintProperty(base.id,'text-color','#756e62');
+    map.setPaintProperty(base.id,'text-halo-color','#f7f1df');
+   }
+  }
+ });
  map.addControl(new mapboxgl.NavigationControl({showCompass:true,visualizePitch:true}),'bottom-right');
  const merc=mapboxgl.MercatorCoordinate.fromLngLat(ORIGIN),unit=merc.meterInMercatorCoordinateUnits();
  const world=p=>{const c=mapboxgl.MercatorCoordinate.fromLngLat([p.longitude,p.latitude]);return V((c.x-merc.x)/unit,0,(c.y-merc.y)/unit);};
