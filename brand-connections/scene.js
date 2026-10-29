@@ -133,7 +133,7 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
    const mpp=40075016.686*Math.cos(map.getCenter().lat*Math.PI/180)/(512*2**map.getZoom()),symbol=mpp*5.2;
    for(const n of nodes){n.g.scale.setScalar(symbol*(n.closed ? .8 : 1));n.g.visible=n.p.point_type==='permanent'||progress>.72;
     const fade=clamp(((Math.cos(fadePhase*Math.PI*2)+1)/2-.1)/.8,0,1);
-    const opacity=reducedMotion ? 1 : fade*fade*(3-2*fade);
+    const opacity=reducedMotion ? 1 : .2+.8*fade*fade*(3-2*fade);
     for(const entry of n.pulseMaterials)entry.material.opacity=entry.opacity*opacity;
    }
    for(const a of arcs){a.uniforms.uSymbol.value=symbol;a.uniforms.uReveal.value=progress;a.uniforms.uPhase.value=flowPhase;a.uniforms.uRadius.value=mpp*1.8;
