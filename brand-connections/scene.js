@@ -114,15 +114,15 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
    const from=world(link.source),to=world(link.target),length=from.distanceTo(to),height=clamp(length*.20,180,2800);
    const curve=new THREE.CatmullRomCurve3(Array.from({length:49},(_,i)=>{const t=i/48;return from.clone().lerp(to,t).add(V(0,Math.sin(Math.PI*t)*height,0));}));
    const geo=new THREE.TubeGeometry(curve,72,1,8,false);
-   const uniforms={uSymbol:{value:1},uRadius:{value:1},uReveal:{value:progress},uMotion:{value:reducedMotion?0:1},uHalo:{value:1},uGlow:{value:new THREE.Color(0xffd77b)},uPhase:{value:0},uColor:{value:new THREE.Color(0xc05a2b)},uOpacity:{value:.75}};
+   const uniforms={uSymbol:{value:1},uRadius:{value:1},uReveal:{value:progress},uMotion:{value:reducedMotion?0:1},uHalo:{value:1},uGlow:{value:new THREE.Color(0xffffff)},uPhase:{value:0},uColor:{value:new THREE.Color(0xc05a2b)},uOpacity:{value:.75}};
    const outerMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms,transparent:true,side:THREE.BackSide,depthWrite:false});
    const baseOpacity=link.target.classification_inferred ? .85 : .98;
    const innerUniforms={...uniforms,uHalo:{value:0},uRadius:{value:.5},uColor:{value:new THREE.Color(0xc05a2b)},uOpacity:{value:baseOpacity}};
    const innerMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms:innerUniforms,transparent:true,depthWrite:false});
-   const glowUniforms={...uniforms,uRadius:{value:1},uColor:{value:new THREE.Color(0xffd77b)},uOpacity:{value:.3}};
+   const glowUniforms={...uniforms,uRadius:{value:1},uColor:{value:new THREE.Color(0xffffff)},uOpacity:{value:.3}};
    const glowMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms:glowUniforms,transparent:true,side:THREE.BackSide,depthWrite:false});
    const glow=new THREE.Mesh(geo,glowMat),outer=new THREE.Mesh(geo,outerMat),inner=new THREE.Mesh(geo,innerMat);meshes.add(glow,outer,inner);
-   const tip=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xffe6a0}));meshes.add(tip);
+   const tip=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xffffff}));meshes.add(tip);
    arcs.push({link,curve,glow,outer,inner,tip,uniforms,innerUniforms,glowUniforms,baseOpacity});
   }
   if(!arcs.length){progress=1;done=true;}
