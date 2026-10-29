@@ -8,6 +8,7 @@ import argparse
 import base64
 from concurrent.futures import ThreadPoolExecutor
 import gzip
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -62,6 +63,19 @@ def build(local_runtime=None):
     chapter.mkdir()
     for name in ['index.html','app.js','style.css','scene.js','model.js','logos.js']:
         shutil.copy2(ROOT/'brand-connections'/name, chapter/name)
+    # Version module URLs as well as the entrypoint, so published edits do not
+    # reuse an older scene from a visitor's browser cache.
+    for name in ['scene.js','app.js']:
+        module = (chapter/name).read_text(encoding='utf-8')
+        for dependency in ['model.js','logos.js','scene.js']:
+            version = hashlib.sha256((chapter/dependency).read_bytes()).hexdigest()[:12]
+            module = module.replace("from './"+dependency+"'", "from './"+dependency+"?v="+version+"'")
+        (chapter/name).write_text(module,encoding='utf-8')
+    html = (chapter/'index.html').read_text(encoding='utf-8')
+    for name in ['app.js','style.css']:
+        version = hashlib.sha256((chapter/name).read_bytes()).hexdigest()[:12]
+        html = html.replace('./'+name, './'+name+'?v='+version)
+    (chapter/'index.html').write_text(html,encoding='utf-8')
     (chapter/'data').mkdir()
     (chapter/'data/runtime.json').write_text(json.dumps(
         {'as_of':'2026-10-28','points':points,'land':land},
