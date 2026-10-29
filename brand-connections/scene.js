@@ -46,7 +46,7 @@ const fragment=`varying float vT;uniform float uReveal;uniform float uPhase;unif
  float behind=head-vT;
  float pulse=smoothstep(-.012,.012,behind)*(1.0-smoothstep(.015,.24,behind))*uMotion;
  vec3 colour=mix(uColor,uGlow,pulse);
- float alpha=uOpacity*mix(.48+.52*pulse,.08+.7*pulse,uHalo);
+ float alpha=uOpacity*mix(.72+.28*pulse,.12+.88*pulse,uHalo);
  gl_FragColor=vec4(colour,alpha);
 #include <colorspace_fragment>
 }`;
@@ -114,14 +114,16 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
    const from=world(link.source),to=world(link.target),length=from.distanceTo(to),height=clamp(length*.20,180,2800);
    const curve=new THREE.CatmullRomCurve3(Array.from({length:49},(_,i)=>{const t=i/48;return from.clone().lerp(to,t).add(V(0,Math.sin(Math.PI*t)*height,0));}));
    const geo=new THREE.TubeGeometry(curve,72,1,8,false);
-   const uniforms={uSymbol:{value:1},uRadius:{value:1},uReveal:{value:progress},uMotion:{value:reducedMotion?0:1},uHalo:{value:1},uGlow:{value:new THREE.Color(0xffedb0)},uPhase:{value:0},uColor:{value:new THREE.Color(0xb57656)},uOpacity:{value:.6}};
+   const uniforms={uSymbol:{value:1},uRadius:{value:1},uReveal:{value:progress},uMotion:{value:reducedMotion?0:1},uHalo:{value:1},uGlow:{value:new THREE.Color(0xffd77b)},uPhase:{value:0},uColor:{value:new THREE.Color(0xc05a2b)},uOpacity:{value:.75}};
    const outerMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms,transparent:true,side:THREE.BackSide,depthWrite:false});
-   const baseOpacity=link.target.classification_inferred ? .72 : .9;
-   const innerUniforms={...uniforms,uHalo:{value:0},uRadius:{value:.5},uColor:{value:new THREE.Color(0xb57656)},uOpacity:{value:baseOpacity}};
+   const baseOpacity=link.target.classification_inferred ? .85 : .98;
+   const innerUniforms={...uniforms,uHalo:{value:0},uRadius:{value:.5},uColor:{value:new THREE.Color(0xc05a2b)},uOpacity:{value:baseOpacity}};
    const innerMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms:innerUniforms,transparent:true,depthWrite:false});
-   const outer=new THREE.Mesh(geo,outerMat),inner=new THREE.Mesh(geo,innerMat);meshes.add(outer,inner);
-   const tip=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xf7f4ee}));meshes.add(tip);
-   arcs.push({link,curve,outer,inner,tip,uniforms,innerUniforms,baseOpacity});
+   const glowUniforms={...uniforms,uRadius:{value:1},uColor:{value:new THREE.Color(0xffd77b)},uOpacity:{value:.3}};
+   const glowMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms:glowUniforms,transparent:true,side:THREE.BackSide,depthWrite:false});
+   const glow=new THREE.Mesh(geo,glowMat),outer=new THREE.Mesh(geo,outerMat),inner=new THREE.Mesh(geo,innerMat);meshes.add(glow,outer,inner);
+   const tip=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xffe6a0}));meshes.add(tip);
+   arcs.push({link,curve,glow,outer,inner,tip,uniforms,innerUniforms,glowUniforms,baseOpacity});
   }
   if(!arcs.length){progress=1;done=true;}
   rotationState();map.triggerRepaint();
@@ -138,9 +140,9 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
     const opacity=reducedMotion ? 1 : .2+.8*fade*fade*(3-2*fade);
     for(const entry of n.pulseMaterials)entry.material.opacity=entry.opacity*opacity;
    }
-   for(const a of arcs){a.uniforms.uSymbol.value=symbol;a.uniforms.uReveal.value=progress;a.uniforms.uPhase.value=flowPhase;a.uniforms.uRadius.value=mpp*1.8;
-    a.innerUniforms.uRadius.value=mpp*.55;
-    const t=done ? flowPhase*1.32-.04 : progress;a.tip.position.copy(a.curve.getPointAt(clamp(t,0,1)));a.tip.position.y+=symbol*3.24;a.tip.scale.setScalar(mpp*1.5);a.tip.visible=!reducedMotion&&t>=0&&t<=1;
+   for(const a of arcs){a.uniforms.uSymbol.value=symbol;a.uniforms.uReveal.value=progress;a.uniforms.uPhase.value=flowPhase;a.uniforms.uRadius.value=mpp*2.4;
+    a.innerUniforms.uRadius.value=mpp*.65;a.glowUniforms.uRadius.value=mpp*4.2;
+    const t=done ? flowPhase*1.32-.04 : progress;a.tip.position.copy(a.curve.getPointAt(clamp(t,0,1)));a.tip.position.y+=symbol*3.24;a.tip.scale.setScalar(mpp*2.1);a.tip.visible=!reducedMotion&&t>=0&&t<=1;
    }
    camera.projectionMatrix=new THREE.Matrix4().fromArray(matrix).multiply(transform);camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
    renderer.resetState();renderer.render(scene,camera);if(!paused&&(!done||(!reducedMotion&&nodes.some(n=>n.p.point_type==='temporary')))&&!document.hidden)map.triggerRepaint();
@@ -156,7 +158,7 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
  }
  map.on('click',e=>{const p=hit(e.point);onPick?.(p||null);});
  map.on('mousemove',e=>{const p=hit(e.point);container.style.cursor=p?'pointer':'';if(p?.point_id===lastHovered)return;lastHovered=p?.point_id;
-  for(const a of arcs){const relevant=!p||a.link.source.point_id===p.point_id||a.link.target.point_id===p.point_id;a.uniforms.uOpacity.value=relevant ? .6 : .08;a.innerUniforms.uOpacity.value=relevant ? a.baseOpacity : .12;}map.triggerRepaint();});
+  for(const a of arcs){const relevant=!p||a.link.source.point_id===p.point_id||a.link.target.point_id===p.point_id;a.uniforms.uOpacity.value=relevant ? .75 : .08;a.innerUniforms.uOpacity.value=relevant ? a.baseOpacity : .12;a.glowUniforms.uOpacity.value=relevant ? .3 : .035;}map.triggerRepaint();});
  let lastSize='';resizeObserver=new ResizeObserver(()=>{const size=container.clientWidth+'x'+container.clientHeight;if(size===lastSize)return;lastSize=size;map.resize();if(pending)fitPoints(pending,0);});resizeObserver.observe(container);
  return {
   setPoints(points){pending=points;if(layerReady)draw(points);fitPoints(points);},
