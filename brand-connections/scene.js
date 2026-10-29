@@ -38,11 +38,13 @@ function tent(){
  box(g,0xd8cfbd,4,.12,3.8,0,.03,0);return g;
 }
 const vertex=`varying float vT; uniform float uSymbol; uniform float uRadius; void main(){vT=uv.x;vec3 p=position+normal*(uRadius-1.0);p.y+=uSymbol*mix(3.25,3.22,vT);gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`;
-// A continuous core plus soft travelling highlights, increasing vT from store to stall.
-const fragment=`varying float vT;uniform float uReveal;uniform float uPulses;uniform float uPhase;uniform float uMotion;uniform float uHalo;uniform vec3 uColor;uniform vec3 uGlow;uniform float uOpacity;void main(){
+// One comet travels from vT=0 (permanent store) to vT=1 (temporary stall).
+// The head starts before the source and leaves beyond the target before reset.
+const fragment=`varying float vT;uniform float uReveal;uniform float uPhase;uniform float uMotion;uniform float uHalo;uniform vec3 uColor;uniform vec3 uGlow;uniform float uOpacity;void main(){
  if(vT>uReveal)discard;
- float cycle=fract(vT*uPulses-uPhase);
- float pulse=pow(max(0.0,1.0-abs(cycle*2.0-1.0)),7.0)*uMotion;
+ float head=uPhase*1.32-.04;
+ float behind=head-vT;
+ float pulse=smoothstep(-.012,.012,behind)*(1.0-smoothstep(.015,.24,behind))*uMotion;
  vec3 colour=mix(uColor,uGlow,pulse);
  float alpha=uOpacity*mix(.48+.52*pulse,.08+.7*pulse,uHalo);
  gl_FragColor=vec4(colour,alpha);
@@ -111,8 +113,8 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
   for(const link of connectionsFor(points)){
    const from=world(link.source),to=world(link.target),length=from.distanceTo(to),height=clamp(length*.20,180,2800);
    const curve=new THREE.CatmullRomCurve3(Array.from({length:49},(_,i)=>{const t=i/48;return from.clone().lerp(to,t).add(V(0,Math.sin(Math.PI*t)*height,0));}));
-   const geo=new THREE.TubeGeometry(curve,72,1,8,false),pulses=clamp(length/18000,1,2);
-   const uniforms={uSymbol:{value:1},uRadius:{value:1},uReveal:{value:progress},uPulses:{value:pulses},uMotion:{value:reducedMotion?0:1},uHalo:{value:1},uGlow:{value:new THREE.Color(0xffedb0)},uPhase:{value:0},uColor:{value:new THREE.Color(0xb57656)},uOpacity:{value:.6}};
+   const geo=new THREE.TubeGeometry(curve,72,1,8,false);
+   const uniforms={uSymbol:{value:1},uRadius:{value:1},uReveal:{value:progress},uMotion:{value:reducedMotion?0:1},uHalo:{value:1},uGlow:{value:new THREE.Color(0xffedb0)},uPhase:{value:0},uColor:{value:new THREE.Color(0xb57656)},uOpacity:{value:.6}};
    const outerMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms,transparent:true,side:THREE.BackSide,depthWrite:false});
    const baseOpacity=link.target.classification_inferred ? .72 : .9;
    const innerUniforms={...uniforms,uHalo:{value:0},uRadius:{value:.5},uColor:{value:new THREE.Color(0xb57656)},uOpacity:{value:baseOpacity}};
@@ -138,7 +140,7 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
    }
    for(const a of arcs){a.uniforms.uSymbol.value=symbol;a.uniforms.uReveal.value=progress;a.uniforms.uPhase.value=flowPhase;a.uniforms.uRadius.value=mpp*1.8;
     a.innerUniforms.uRadius.value=mpp*.55;
-    const t=progress;a.tip.position.copy(a.curve.getPointAt(t));a.tip.position.y+=symbol*3.24;a.tip.scale.setScalar(mpp*1.5);a.tip.visible=progress>0&&progress<1;
+    const t=done ? flowPhase*1.32-.04 : progress;a.tip.position.copy(a.curve.getPointAt(clamp(t,0,1)));a.tip.position.y+=symbol*3.24;a.tip.scale.setScalar(mpp*1.5);a.tip.visible=!reducedMotion&&t>=0&&t<=1;
    }
    camera.projectionMatrix=new THREE.Matrix4().fromArray(matrix).multiply(transform);camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
    renderer.resetState();renderer.render(scene,camera);if(!paused&&(!done||(!reducedMotion&&nodes.some(n=>n.p.point_type==='temporary')))&&!document.hidden)map.triggerRepaint();
