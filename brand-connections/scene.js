@@ -81,7 +81,7 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
  const transform=new THREE.Matrix4().makeTranslation(merc.x,merc.y,0).scale(V(unit,-unit,unit)).multiply(new THREE.Matrix4().makeRotationX(Math.PI/2));
  const scene=new THREE.Scene(),camera=new THREE.Camera();scene.add(new THREE.HemisphereLight(0xc4caf0,0xf1e5d5,2.8));const sun=new THREE.DirectionalLight(0xfff1df,2.5);sun.position.set(-1,4,2);scene.add(sun);
  let renderer,nodes=[],arcs=[],selection=[],progress=1,start=0,paused=false,done=true,disposed=false,layerReady=false,pending=null,lastHovered=null,resizeObserver;
- let rotating=!reducedMotion,rotationFrame,lastFrame=0,rotationAfter=0,flowPhase=0,flowLast=0;
+ let rotating=!reducedMotion,rotationFrame,lastFrame=0,rotationAfter=0,flowPhase=0,fadePhase=0,flowLast=0;
  const rotationState=()=>onState?.({progress,paused,done,connections:arcs.length,rotating});
  function orbit(now){
   if(disposed)return;
@@ -98,11 +98,15 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
  const meshes=new THREE.Group();scene.add(meshes);
  function free(){meshes.traverse(o=>{o.geometry?.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});meshes.clear();nodes=[];arcs=[];}
  function draw(points){
-  free();selection=points;progress=reducedMotion?1:0;paused=false;done=reducedMotion;start=performance.now();flowPhase=0;flowLast=start;
+  free();selection=points;progress=reducedMotion?1:0;paused=false;done=reducedMotion;start=performance.now();flowPhase=0;fadePhase=0;flowLast=start;
   rotationAfter=performance.now()+1900;
   nodes=points.map(p=>{const closed=CLOSED.has(p.operating_status),g=p.point_type==='permanent'?shop(closed):tent();g.position.copy(world(p));
    if(closed)g.traverse(o=>{if(o.material){o.material.transparent=true;o.material.opacity=.36;}});
-   const pulseMaterials=[];if(p.point_type==='temporary')g.traverse(o=>{if(o.isMesh&&o.material?.color)pulseMaterials.push({material:o.material,base:o.material.color.clone()});});
+   const pulseMaterials=[];if(p.point_type==='temporary')g.traverse(o=>{
+    for(const material of o.material ? (Array.isArray(o.material)?o.material:[o.material]) : []){
+     pulseMaterials.push({material,opacity:material.opacity});material.transparent=true;material.depthWrite=false;
+    }
+   });
    meshes.add(g);return {p,g,closed,pulseMaterials};});
   for(const link of connectionsFor(points)){
    const from=world(link.source),to=world(link.target),length=from.distanceTo(to),height=clamp(length*.20,180,2800);
@@ -124,12 +128,13 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
   render(gl,matrix){
    if(disposed)return;
    const now=performance.now(),flowDt=clamp((now-flowLast)/1000,0,.05);flowLast=now;
-   if(!paused&&!reducedMotion)flowPhase=(flowPhase+flowDt*.55)%1;
+   if(!paused&&!reducedMotion){flowPhase=(flowPhase+flowDt*.55)%1;fadePhase=(fadePhase+flowDt/3.2)%1;}
    if(!paused&&!done){progress=clamp((now-start)/1500,0,1);if(progress===1)done=true;onState?.({progress,paused,done,connections:arcs.length});}
    const mpp=40075016.686*Math.cos(map.getCenter().lat*Math.PI/180)/(512*2**map.getZoom()),symbol=mpp*5.2;
    for(const n of nodes){n.g.scale.setScalar(symbol*(n.closed ? .8 : 1));n.g.visible=n.p.point_type==='permanent'||progress>.72;
-    const shade=reducedMotion ? 1 : .62+.38*(Math.sin(flowPhase*Math.PI*2)+1)/2;
-    for(const {material,base} of n.pulseMaterials)material.color.copy(base).multiplyScalar(shade);
+    const fade=clamp(((Math.cos(fadePhase*Math.PI*2)+1)/2-.1)/.8,0,1);
+    const opacity=reducedMotion ? 1 : fade*fade*(3-2*fade);
+    for(const entry of n.pulseMaterials)entry.material.opacity=entry.opacity*opacity;
    }
    for(const a of arcs){a.uniforms.uSymbol.value=symbol;a.uniforms.uReveal.value=progress;a.uniforms.uPhase.value=flowPhase;a.uniforms.uRadius.value=mpp*1.8;
     a.innerUniforms.uRadius.value=mpp*.55;
@@ -153,7 +158,7 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
  let lastSize='';resizeObserver=new ResizeObserver(()=>{const size=container.clientWidth+'x'+container.clientHeight;if(size===lastSize)return;lastSize=size;map.resize();if(pending)fitPoints(pending,0);});resizeObserver.observe(container);
  return {
   setPoints(points){pending=points;if(layerReady)draw(points);fitPoints(points);},
-  replay(){progress=reducedMotion?1:0;start=performance.now();flowPhase=0;flowLast=start;paused=false;done=reducedMotion||!arcs.length;onState?.({progress,paused,done,connections:arcs.length});map.triggerRepaint();},
+  replay(){progress=reducedMotion?1:0;start=performance.now();flowPhase=0;fadePhase=0;flowLast=start;paused=false;done=reducedMotion||!arcs.length;onState?.({progress,paused,done,connections:arcs.length});map.triggerRepaint();},
   togglePause(){paused=!paused;if(!paused){if(!done)start=performance.now()-progress*1500;flowLast=performance.now();}onState?.({progress,paused,done,connections:arcs.length});map.triggerRepaint();},
   fit(){rotationAfter=performance.now()+1900;fitPoints(pending);},
   resize(){map.resize();},
