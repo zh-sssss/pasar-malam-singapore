@@ -31,6 +31,8 @@ function shop(closed){
 }
 function tent(){
  const g=new THREE.Group(),geo=new THREE.ConeGeometry(2.85,1.65,4,1);typeBase(g,0xd27c58,4);
+ const pulse=new THREE.Mesh(new THREE.RingGeometry(3.5,4.0,4),new THREE.MeshBasicMaterial({color:0xd97750,transparent:true,opacity:.4,side:THREE.DoubleSide,depthWrite:false}));
+ pulse.rotation.x=-Math.PI/2;pulse.position.y=.025;g.add(pulse);g.userData.pulse=pulse;
  geo.rotateY(Math.PI/4);const roof=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0xd97750}));roof.position.y=2.65;g.add(roof);
  roof.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:INK})));
  for(const x of [-1.65,1.65])for(const z of [-1.65,1.65])box(g,0xf7f4ee,.09,2.4,.09,x,1.2,z);
@@ -126,7 +128,9 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
    if(!paused&&!reducedMotion)flowPhase=(flowPhase+flowDt*.55)%1;
    if(!paused&&!done){progress=clamp((now-start)/1500,0,1);if(progress===1)done=true;onState?.({progress,paused,done,connections:arcs.length});}
    const mpp=40075016.686*Math.cos(map.getCenter().lat*Math.PI/180)/(512*2**map.getZoom()),symbol=mpp*5.2;
-   for(const n of nodes){n.g.scale.setScalar(symbol*(n.closed ? .8 : 1));n.g.visible=n.p.point_type==='permanent'||progress>.72;}
+   for(const n of nodes){n.g.scale.setScalar(symbol*(n.closed ? .8 : 1));n.g.visible=n.p.point_type==='permanent'||progress>.72;
+    const pulse=n.g.userData.pulse;if(pulse){const beat=reducedMotion?.35:(Math.sin(flowPhase*Math.PI*2)+1)/2;pulse.scale.setScalar(1+beat*.42);pulse.material.opacity=.16+beat*.42;}
+   }
    for(const a of arcs){a.uniforms.uSymbol.value=symbol;a.uniforms.uReveal.value=progress;a.uniforms.uPhase.value=flowPhase;a.uniforms.uRadius.value=mpp*1.8;
     a.innerUniforms.uRadius.value=mpp*.55;
     const t=progress;a.tip.position.copy(a.curve.getPointAt(t));a.tip.position.y+=symbol*3.24;a.tip.scale.setScalar(mpp*1.5);a.tip.visible=progress>0&&progress<1;
