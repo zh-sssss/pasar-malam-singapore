@@ -27,3 +27,7 @@ qa/
 .deps/
 __pycache__/
 *.log
+
+# Publication-only display runtime and local snapshots
+brand-connections/data/
+__brand_publish/

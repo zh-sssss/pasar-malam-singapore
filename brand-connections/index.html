@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f2eee6">
+<title>Beyond the Storefront · Singapore Brand Atlas</title>
+<meta name="description" content="Explore the connections between Singapore's permanent stores and temporary pasar malam presences in three dimensions.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.css" rel="stylesheet">
+<link href="./style.css" rel="stylesheet">
+<style>html,body{margin:0;height:100%;background:#f2eee6}#brand-connections{height:100dvh;min-height:560px}@media(max-width:600px){#brand-connections{min-height:500px}}</style>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.js"></script>
+</head>
+<body><main id="brand-connections"><p class="bc-boot">Opening the brand atlas…</p></main>
+<script src="../mapbox-config.js"></script>
+<script type="module">
+import {mountBrandConnections} from './app.js';
+const config={mapboxToken:window.MAPBOX_CONFIG?.accessToken};
+mountBrandConnections(document.querySelector('#brand-connections'),config).catch(error=>{
+ const p=document.createElement('p');p.className='bc-boot';p.textContent='The atlas could not start. '+error.message;
+ document.querySelector('#brand-connections').replaceChildren(p);
+});
+</script>
+</body></html>
