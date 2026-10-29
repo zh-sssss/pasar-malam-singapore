@@ -25,8 +25,9 @@ Actions variable `BRAND_DISPLAY_POINTS_GZIP` (gzip + base64 JSON), outside Git
 history. Its contents are the 150 allowlisted public business/market display
 records, not original workbooks, reports or audit notes. The publication script
 checks identifiers and permanent/temporary counts and retains source links and
-precision labels. Geographic context and the existing public browser Mapbox
-configuration are reused from the original deployed website. No token value or
+precision labels. Mapbox Light supplies roads, parks, waterways and place labels in the chapter
+palette. The existing public browser Mapbox configuration is reused from the
+original deployed website. No token value or
 configuration file is committed.
 
 For a local publication check:
