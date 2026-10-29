@@ -42,7 +42,7 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
  if(!globalThis.mapboxgl?.supported())throw new Error('This browser does not support the WebGL map. Try a recent Chrome, Edge or Safari browser.');
  const map=new mapboxgl.Map({container,accessToken:mapboxToken||undefined,style:'mapbox://styles/mapbox/light-v11',center:ORIGIN,zoom:10.3,pitch:55,bearing:-18,antialias:true,minZoom:9,maxZoom:17,maxPitch:72,attributionControl:false});
  map.addControl(new mapboxgl.AttributionControl({compact:true,customAttribution:'Illustrative brand symbols and connections'}),'bottom-right');
- // Keep Mapbox's real roads, parks, waterways and place labels, with the
+ // Keep Mapbox's roads, parks and waterways inside Singapore, with the
  // chapter's paper/mint palette. Basemap roads are solid; brand arcs are dashed.
  map.on('style.load',()=>{
   for(const base of map.getStyle().layers){
@@ -52,10 +52,12 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
     map.setPaintProperty(base.id,'fill-color',['match',['get','class'],['park','wood','grass','scrub','national_park'],'#ceddcc',['hospital','school'],'#e7dfcc','#e8e2cd']);
    }
    if(base.type==='symbol'&&base.layout?.['text-field']){
-    map.setPaintProperty(base.id,'text-color','#756e62');
-    map.setPaintProperty(base.id,'text-halo-color','#f7f1df');
+    map.setLayoutProperty(base.id,'visibility','none');
    }
   }
+  // Opaque country polygons cover contextual detail outside Singapore.
+  map.addSource('context-countries',{type:'vector',url:'mapbox://mapbox.country-boundaries-v1'});
+  map.addLayer({id:'plain-neighbouring-countries',type:'fill',source:'context-countries','source-layer':'country_boundaries',filter:['all',['!=',['get','iso_3166_1'],'SG'],['==',['get','disputed'],'false'],['any',['==',['get','worldview'],'all'],['in','US',['get','worldview']]]],paint:{'fill-color':'#f2e8cc','fill-opacity':1,'fill-antialias':true}});
  });
  map.addControl(new mapboxgl.NavigationControl({showCompass:true,visualizePitch:true}),'bottom-right');
  const merc=mapboxgl.MercatorCoordinate.fromLngLat(ORIGIN),unit=merc.meterInMercatorCoordinateUnits();
@@ -95,10 +97,10 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
    const from=world(link.source),to=world(link.target),length=from.distanceTo(to),height=clamp(length*.20,180,2800);
    const curve=new THREE.CatmullRomCurve3(Array.from({length:49},(_,i)=>{const t=i/48;return from.clone().lerp(to,t).add(V(0,Math.sin(Math.PI*t)*height,0));}));
    const geo=new THREE.TubeGeometry(curve,72,1,5,false),dashes=clamp(length/550,7,32);
-   const uniforms={uSymbol:{value:1},uRadius:{value:1},uReveal:{value:progress},uDashes:{value:dashes},uPhase:{value:0},uColor:{value:new THREE.Color(0xc1a48f)},uOpacity:{value:.35}};
+   const uniforms={uSymbol:{value:1},uRadius:{value:1},uReveal:{value:progress},uDashes:{value:dashes},uPhase:{value:0},uColor:{value:new THREE.Color(0xa6785c)},uOpacity:{value:.5}};
    const outerMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms,transparent:true,side:THREE.BackSide});
-   const baseOpacity=link.target.classification_inferred ? .55 : .72;
-   const innerUniforms={...uniforms,uRadius:{value:.5},uColor:{value:new THREE.Color(0xd0a08a)},uOpacity:{value:baseOpacity}};
+   const baseOpacity=link.target.classification_inferred ? .72 : .9;
+   const innerUniforms={...uniforms,uRadius:{value:.5},uColor:{value:new THREE.Color(0xb57656)},uOpacity:{value:baseOpacity}};
    const innerMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms:innerUniforms,transparent:true});
    const outer=new THREE.Mesh(geo,outerMat),inner=new THREE.Mesh(geo,innerMat);meshes.add(outer,inner);
    const tip=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xf7f4ee}));meshes.add(tip);
@@ -133,7 +135,7 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
  }
  map.on('click',e=>{const p=hit(e.point);onPick?.(p||null);});
  map.on('mousemove',e=>{const p=hit(e.point);container.style.cursor=p?'pointer':'';if(p?.point_id===lastHovered)return;lastHovered=p?.point_id;
-  for(const a of arcs){const relevant=!p||a.link.source.point_id===p.point_id||a.link.target.point_id===p.point_id;a.uniforms.uOpacity.value=relevant ? .35 : .08;a.innerUniforms.uOpacity.value=relevant ? a.baseOpacity : .12;}map.triggerRepaint();});
+  for(const a of arcs){const relevant=!p||a.link.source.point_id===p.point_id||a.link.target.point_id===p.point_id;a.uniforms.uOpacity.value=relevant ? .5 : .08;a.innerUniforms.uOpacity.value=relevant ? a.baseOpacity : .12;}map.triggerRepaint();});
  let lastSize='';resizeObserver=new ResizeObserver(()=>{const size=container.clientWidth+'x'+container.clientHeight;if(size===lastSize)return;lastSize=size;map.resize();if(pending)fitPoints(pending,0);});resizeObserver.observe(container);
  return {
   setPoints(points){pending=points;if(layerReady)draw(points);fitPoints(points);},
