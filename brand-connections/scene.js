@@ -12,13 +12,17 @@ function box(parent,color,w,h,d,x,y,z,edge=true){
  if(edge){const lines=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:INK,transparent:true,opacity:.8}));m.add(lines);}
  return m;
 }
+function typeBase(group,color,sides){
+ const base=new THREE.Mesh(new THREE.CircleGeometry(3.35,sides),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9,side:THREE.DoubleSide}));
+ base.rotation.x=-Math.PI/2;base.position.y=.015;group.add(base);
+}
 function shop(closed){
- const g=new THREE.Group();
- box(g,closed?0xbfc3c1:CREAM,3.5,2.8,2.6,0,1.4,0);
- box(g,closed?0xc1c6c4:MINT,3.9,.45,3,0,2.95,0);
+ const g=new THREE.Group();typeBase(g,closed?0xb7bfbc:0x4e8975,32);
+ box(g,closed?0xbfc3c1:0xb7d3c2,3.5,2.8,2.6,0,1.4,0);
+ const roof=box(g,closed?0xc1c6c4:0x4e8975,4.1,.55,3.2,0,2.95,0);roof.material.dispose();roof.material=new THREE.MeshBasicMaterial({color:closed?0xb9c1bd:0x4e8975});
  box(g,0x697c7b,2.65,1.65,.08,0,1.25,1.34);
  box(g,closed?0xc3c5c0:0xeac4b0,3.8,.22,1.15,0,2.28,1.65);
- for(let i=0;i<6;i++)box(g,i%2?0xf7f4ee:closed?0xb8bfbc:CORAL,.6,.24,.85,(i-2.5)*.6,2.13,1.8,false);
+ for(let i=0;i<6;i++)box(g,i%2?0xf7f4ee:closed?0xb8bfbc:0x5f9a82,.6,.24,.85,(i-2.5)*.6,2.13,1.8,false);
  box(g,0xf7f4ee,2.65,.55,.12,0,2.6,1.53);
  box(g,closed?0xaab5ad:0x8dad89,.5,.5,.5,-2,.25,1.2);
  const leaf=new THREE.Mesh(new THREE.IcosahedronGeometry(.5,0),material(closed?0xaab4a9:0x8db766));leaf.position.set(-2,.9,1.2);g.add(leaf);
@@ -26,16 +30,22 @@ function shop(closed){
  return g;
 }
 function tent(){
- const g=new THREE.Group(),geo=new THREE.ConeGeometry(2.65,1.05,4,1);
- geo.rotateY(Math.PI/4);const roof=new THREE.Mesh(geo,material(CORAL));roof.position.y=2.7;g.add(roof);
+ const g=new THREE.Group(),geo=new THREE.ConeGeometry(2.85,1.65,4,1);typeBase(g,0xd27c58,4);
+ geo.rotateY(Math.PI/4);const roof=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0xd97750}));roof.position.y=2.65;g.add(roof);
  roof.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:INK})));
  for(const x of [-1.65,1.65])for(const z of [-1.65,1.65])box(g,0xf7f4ee,.09,2.4,.09,x,1.2,z);
  box(g,0xf2e8cc,3.45,1,1,0,.6,.7);box(g,0xefd0c3,3.6,.25,.12,0,2.17,1.7);
  box(g,0xd8cfbd,4,.12,3.8,0,.03,0);return g;
 }
 const vertex=`varying float vT; uniform float uSymbol; uniform float uRadius; void main(){vT=uv.x;vec3 p=position+normal*(uRadius-1.0);p.y+=uSymbol*mix(3.25,3.22,vT);gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`;
-// Subtracting phase moves each dash toward increasing vT: store to stall.
-const fragment=`varying float vT;uniform float uReveal;uniform float uDashes;uniform float uPhase;uniform vec3 uColor;uniform float uOpacity;void main(){if(vT>uReveal)discard;if(fract(vT*uDashes-uPhase)>.64)discard;gl_FragColor=vec4(uColor,uOpacity);
+// A continuous core plus soft travelling highlights, increasing vT from store to stall.
+const fragment=`varying float vT;uniform float uReveal;uniform float uPulses;uniform float uPhase;uniform float uMotion;uniform float uHalo;uniform vec3 uColor;uniform vec3 uGlow;uniform float uOpacity;void main(){
+ if(vT>uReveal)discard;
+ float cycle=fract(vT*uPulses-uPhase);
+ float pulse=pow(max(0.0,1.0-abs(cycle*2.0-1.0)),7.0)*uMotion;
+ vec3 colour=mix(uColor,uGlow,pulse);
+ float alpha=uOpacity*mix(.48+.52*pulse,.08+.7*pulse,uHalo);
+ gl_FragColor=vec4(colour,alpha);
 #include <colorspace_fragment>
 }`;
 export function createScene(container,{land,mapboxToken,onPick,onState,reducedMotion=false}){
@@ -43,7 +53,7 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
  const map=new mapboxgl.Map({container,accessToken:mapboxToken||undefined,style:'mapbox://styles/mapbox/light-v11',center:ORIGIN,zoom:10.3,pitch:55,bearing:-18,antialias:true,minZoom:9,maxZoom:17,maxPitch:72,attributionControl:false});
  map.addControl(new mapboxgl.AttributionControl({compact:true,customAttribution:'Illustrative brand symbols and connections'}),'bottom-right');
  // Keep Mapbox's roads, parks and waterways inside Singapore, with the
- // chapter's paper/mint palette. Basemap roads are solid; brand arcs are dashed.
+ // chapter's paper/mint palette. Basemap roads are solid; brand arcs carry flowing light.
  map.on('style.load',()=>{
   for(const base of map.getStyle().layers){
    if(base.type==='background')map.setPaintProperty(base.id,'background-color','#f2e8cc');
@@ -96,12 +106,12 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
   for(const link of connectionsFor(points)){
    const from=world(link.source),to=world(link.target),length=from.distanceTo(to),height=clamp(length*.20,180,2800);
    const curve=new THREE.CatmullRomCurve3(Array.from({length:49},(_,i)=>{const t=i/48;return from.clone().lerp(to,t).add(V(0,Math.sin(Math.PI*t)*height,0));}));
-   const geo=new THREE.TubeGeometry(curve,72,1,5,false),dashes=clamp(length/550,7,32);
-   const uniforms={uSymbol:{value:1},uRadius:{value:1},uReveal:{value:progress},uDashes:{value:dashes},uPhase:{value:0},uColor:{value:new THREE.Color(0xa6785c)},uOpacity:{value:.5}};
-   const outerMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms,transparent:true,side:THREE.BackSide});
+   const geo=new THREE.TubeGeometry(curve,72,1,8,false),pulses=clamp(length/18000,1,2);
+   const uniforms={uSymbol:{value:1},uRadius:{value:1},uReveal:{value:progress},uPulses:{value:pulses},uMotion:{value:reducedMotion?0:1},uHalo:{value:1},uGlow:{value:new THREE.Color(0xffedb0)},uPhase:{value:0},uColor:{value:new THREE.Color(0xb57656)},uOpacity:{value:.6}};
+   const outerMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms,transparent:true,side:THREE.BackSide,depthWrite:false});
    const baseOpacity=link.target.classification_inferred ? .72 : .9;
-   const innerUniforms={...uniforms,uRadius:{value:.5},uColor:{value:new THREE.Color(0xb57656)},uOpacity:{value:baseOpacity}};
-   const innerMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms:innerUniforms,transparent:true});
+   const innerUniforms={...uniforms,uHalo:{value:0},uRadius:{value:.5},uColor:{value:new THREE.Color(0xb57656)},uOpacity:{value:baseOpacity}};
+   const innerMat=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms:innerUniforms,transparent:true,depthWrite:false});
    const outer=new THREE.Mesh(geo,outerMat),inner=new THREE.Mesh(geo,innerMat);meshes.add(outer,inner);
    const tip=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xf7f4ee}));meshes.add(tip);
    arcs.push({link,curve,outer,inner,tip,uniforms,innerUniforms,baseOpacity});
@@ -117,8 +127,8 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
    if(!paused&&!done){progress=clamp((now-start)/1500,0,1);if(progress===1)done=true;onState?.({progress,paused,done,connections:arcs.length});}
    const mpp=40075016.686*Math.cos(map.getCenter().lat*Math.PI/180)/(512*2**map.getZoom()),symbol=mpp*5.2;
    for(const n of nodes){n.g.scale.setScalar(symbol*(n.closed ? .8 : 1));n.g.visible=n.p.point_type==='permanent'||progress>.72;}
-   for(const a of arcs){a.uniforms.uSymbol.value=symbol;a.uniforms.uReveal.value=progress;a.uniforms.uPhase.value=flowPhase;a.uniforms.uRadius.value=mpp*.85;
-    a.innerUniforms.uRadius.value=mpp*.48;
+   for(const a of arcs){a.uniforms.uSymbol.value=symbol;a.uniforms.uReveal.value=progress;a.uniforms.uPhase.value=flowPhase;a.uniforms.uRadius.value=mpp*1.8;
+    a.innerUniforms.uRadius.value=mpp*.55;
     const t=progress;a.tip.position.copy(a.curve.getPointAt(t));a.tip.position.y+=symbol*3.24;a.tip.scale.setScalar(mpp*1.5);a.tip.visible=progress>0&&progress<1;
    }
    camera.projectionMatrix=new THREE.Matrix4().fromArray(matrix).multiply(transform);camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
@@ -135,7 +145,7 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
  }
  map.on('click',e=>{const p=hit(e.point);onPick?.(p||null);});
  map.on('mousemove',e=>{const p=hit(e.point);container.style.cursor=p?'pointer':'';if(p?.point_id===lastHovered)return;lastHovered=p?.point_id;
-  for(const a of arcs){const relevant=!p||a.link.source.point_id===p.point_id||a.link.target.point_id===p.point_id;a.uniforms.uOpacity.value=relevant ? .5 : .08;a.innerUniforms.uOpacity.value=relevant ? a.baseOpacity : .12;}map.triggerRepaint();});
+  for(const a of arcs){const relevant=!p||a.link.source.point_id===p.point_id||a.link.target.point_id===p.point_id;a.uniforms.uOpacity.value=relevant ? .6 : .08;a.innerUniforms.uOpacity.value=relevant ? a.baseOpacity : .12;}map.triggerRepaint();});
  let lastSize='';resizeObserver=new ResizeObserver(()=>{const size=container.clientWidth+'x'+container.clientHeight;if(size===lastSize)return;lastSize=size;map.resize();if(pending)fitPoints(pending,0);});resizeObserver.observe(container);
  return {
   setPoints(points){pending=points;if(layerReady)draw(points);fitPoints(points);},
@@ -144,7 +154,7 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
   fit(){rotationAfter=performance.now()+1900;fitPoints(pending);},
   resize(){map.resize();},
   toggleRotation(){rotating=!rotating;rotationAfter=performance.now();rotationState();return rotating;},
-  setReducedMotion(value){reducedMotion=value;if(value){rotating=false;progress=1;done=true;paused=false;rotationState();map.triggerRepaint();}},
+  setReducedMotion(value){reducedMotion=value;for(const a of arcs)a.uniforms.uMotion.value=value?0:1;if(value){rotating=false;progress=1;done=true;paused=false;rotationState();map.triggerRepaint();}},
   destroy(){disposed=true;cancelAnimationFrame(rotationFrame);document.removeEventListener('visibilitychange',wake);resizeObserver.disconnect();map.remove();},
   getState(){return {progress,paused,done,connections:arcs.length,points:selection.length,pitch:map.getPitch(),bearing:map.getBearing(),rotating};},
   map
