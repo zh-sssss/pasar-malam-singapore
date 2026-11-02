@@ -35,7 +35,7 @@ export function reviewedPoint(post,connection){
   return {point_id:'COMM-'+post.id,vendor_id:String(vendorId),brand_name:String(first('brand_name')||payload.brand_name||'').slice(0,100),point_type:type,
    location_name:String(payload.location?.label||'Community map pin').slice(0,180),longitude:coordinates[0],latitude:coordinates[1],address:null,
    coordinate_precision:'community_selected_map_pin',operating_status:'status_not_shown',source_group:'community_reviewed',review_status:'published',
-   source_url:connection.deploymentUrl.replace(/\/$/,'')+'/posts/'+post.id,checked_on:String(post.updated||post.created||'').slice(0,10),category:first('category')||payload.category};
+   source_url:connection.deploymentUrl.replace(/\/$/,'')+'/feed/'+post.id+'/view?mode=ID',checked_on:String(post.updated||post.created||'').slice(0,10),category:first('category')||payload.category};
  }catch{return null;}
 }
 export function postBody(schema,payload,values,title,description){
