@@ -1,3 +1,4 @@
+import {mountFeedback} from './feedback/app.js';
 import {FEEDBACK_CONNECTION} from './feedback-connection.js';
 import {loadReviewedPoints} from './community.js';
 import {normalizePoints,brandIndex,connectionsFor,CLOSED,isOrigin,statusText,safeURL} from './model.js';
@@ -21,13 +22,15 @@ export async function mountBrandConnections(container,options={}){
  <section class="bc-stage" aria-label="Three-dimensional brand connections">
   <div class="bc-map" aria-label="Drag to pan. Right-drag to rotate the three-dimensional map."></div>
   <div class="bc-paper" aria-hidden="true"></div>
-  <header class="bc-topbar"><a class="bc-interactive" href="./feedback/">Interactive <span>↗</span></a><button class="bc-about">About this atlas ↗</button></header>
+  <header class="bc-topbar"><button class="bc-about">About this atlas ↗</button></header>
+  <a class="bc-feedback-entry" href="./feedback/" aria-label="Feedback: share a stall or suggest a market location"><span class="bc-feedback-label">Share a stall.<br>Suggest a spot.</span><span class="bc-feedback-arrow" aria-hidden="true">→</span></a>
   <section class="bc-brand-story" aria-live="polite"><div class="bc-brand-stats"></div><p class="bc-description bc-sr-only"></p></section>
   <div class="bc-map-hint">Drag to explore <span>·</span> Right-drag to orbit <span>·</span> Scroll to zoom</div>
   <div class="bc-bottom-bar"><div class="bc-legend"><span><i class="bc-store-symbol"></i> Permanent store</span><span><i class="bc-tent-symbol"></i> Temporary stall</span><span><i class="bc-closed-symbol"></i> Closed / paused</span></div><div class="bc-animation"><span class="bc-arc-count"></span><button class="bc-replay">↻ Replay connections</button><button class="bc-pause" hidden>Pause flow</button><button class="bc-orbit" aria-pressed="true">Ⅱ Pause rotation</button><button class="bc-fit" aria-label="Fit all points for this brand">↗ Fit brand</button></div></div>
   <section class="bc-detail" hidden aria-label="Location details"></section>
- <dialog class="bc-methods"><button class="bc-dialog-close" aria-label="Close information">×</button><span class="bc-eyebrow">A NOTE ON THE CONNECTIONS</span><h2>Places linked<br>by a shared brand.</h2><p>Each arc links a permanent store to a temporary presence of the same brand. These are brand associations, not observed trips, delivery routes or proof that a particular store supplied a stall. Arc height and model size are illustrative.</p><h3>Reading the atlas</h3><p>All non-closed permanent stores connect to every temporary point of the selected brand. Closed or paused stores remain in pale colours and have no connections. Operating status not shown is retained as unknown.</p><p>The snapshot contains 150 brand-location records across 68 existing brand-name IDs: 59 permanent and 91 temporary. It describes the research coverage, not a complete Singapore store census. Different spellings remain separate unless an identity link was confirmed.</p><h3>Community contributions</h3><p>The Interactive page collects missing brands, locations and vendor preferences. Contributions remain outside the public map until an editor publishes them in Ushahidi. Published location contributions are labelled as community reviewed. Location preferences are intentions and never become actual store points automatically.</p><h3>How points are classified</h3><p>Google Maps is the selected basis for fixed locations. Fourteen older locations without a matching brand-at-address profile are treated as temporary under this project's rule. Their classification is an inference. Their older evidence and precise limitations remain in the local research register.</p><p>Market points represent venues rather than individual stall entrances. Building proxies and the address-free deanqaisara profile pin show approximate positions. Event dates are reported windows, not independently verified trading dates.</p><h3>Design & sources</h3><p>Visual language follows the group's intro diorama: soft pastels, warm ink lines and miniature storefronts. Mapbox Light provides roads, green spaces and water features in Singapore, recoloured to the chapter's palette. Basemap text labels are hidden and neighbouring countries use a plain paper fill. Green flat-roof shops with circular bases denote permanent stores; coral tents with diamond bases that gently fade between full visibility and a faint presence denote temporary stalls. Solid basemap roads are geographic context; continuous arcs with travelling light show brand connections. Brand location and appearance sources can be opened from each point.</p><div class="bc-logo-sources"></div><p class="bc-method-foot">Location checks: 28 October 2026. Logo sources checked: 29 October 2026.</p></dialog>
- </section>`;
+ <dialog class="bc-methods"><button class="bc-dialog-close" aria-label="Close information">×</button><span class="bc-eyebrow">A NOTE ON THE CONNECTIONS</span><h2>Places linked<br>by a shared brand.</h2><p>Each arc links a permanent store to a temporary presence of the same brand. These are brand associations, not observed trips, delivery routes or proof that a particular store supplied a stall. Arc height and model size are illustrative.</p><h3>Reading the atlas</h3><p>All non-closed permanent stores connect to every temporary point of the selected brand. Closed or paused stores remain in pale colours and have no connections. Operating status not shown is retained as unknown.</p><p>The snapshot contains 150 brand-location records across 68 existing brand-name IDs: 59 permanent and 91 temporary. It describes the research coverage, not a complete Singapore store census. Different spellings remain separate unless an identity link was confirmed.</p><h3>Community contributions</h3><p>The feedback page collects missing brands, locations and vendor preferences. Contributions remain outside the public map until an editor publishes them in Ushahidi. Published location contributions are labelled as community reviewed. Location preferences are intentions and never become actual store points automatically.</p><h3>How points are classified</h3><p>Google Maps is the selected basis for fixed locations. Fourteen older locations without a matching brand-at-address profile are treated as temporary under this project's rule. Their classification is an inference. Their older evidence and precise limitations remain in the local research register.</p><p>Market points represent venues rather than individual stall entrances. Building proxies and the address-free deanqaisara profile pin show approximate positions. Event dates are reported windows, not independently verified trading dates.</p><h3>Design & sources</h3><p>Visual language follows the group's intro diorama: soft pastels, warm ink lines and miniature storefronts. Mapbox Light provides roads, green spaces and water features in Singapore, recoloured to the chapter's palette. Basemap text labels are hidden and neighbouring countries use a plain paper fill. Green flat-roof shops with circular bases denote permanent stores; coral tents with diamond bases that gently fade between full visibility and a faint presence denote temporary stalls. Solid basemap roads are geographic context; continuous arcs with travelling light show brand connections. Brand location and appearance sources can be opened from each point.</p><div class="bc-logo-sources"></div><p class="bc-method-foot">Location checks: 28 October 2026. Logo sources checked: 29 October 2026.</p></dialog>
+ </section>
+ <section class="bc-feedback-rail" aria-label="Share a stall. Suggest a spot." aria-hidden="true"><div class="bc-feedback-content"></div></section>`;
  const q=s=>container.querySelector(s),buttons=new Map();
  q('.bc-brand-total').textContent=brands.length;
  let previousGroup=null;
@@ -66,7 +69,7 @@ export async function mountBrandConnections(container,options={}){
  }});
  function select(id){
   const b=brands.find(b=>b.id===id);if(!b)return;
-  selected=b;q('.bc-interactive').href=new URL('./feedback/?brand='+encodeURIComponent(id),import.meta.url).href;showDetail(null);for(const [bid,button] of buttons)button.setAttribute('aria-pressed',String(bid===id));
+  selected=b;q('.bc-feedback-entry').href=new URL('./feedback/?brand='+encodeURIComponent(id),import.meta.url).href;showDetail(null);for(const [bid,button] of buttons)button.setAttribute('aria-pressed',String(bid===id));
   buttons.get(id)?.scrollIntoView({block:'nearest',inline:'nearest',behavior:reduced.matches?'auto':'smooth'});
   q('.bc-brand-story').setAttribute('aria-label',b.name+' location counts');
   const permanent=b.points.filter(p=>p.point_type==='permanent'),temporary=b.points.filter(p=>p.point_type==='temporary'),closed=permanent.filter(p=>CLOSED.has(p.operating_status)),arcs=connectionsFor(b.points);
@@ -76,11 +79,45 @@ export async function mountBrandConnections(container,options={}){
   scene.setPoints(b.points);options.onBrandChange?.({vendor_id:id,name:b.name});
   const url=new URL(location.href);url.hash='brand='+encodeURIComponent(id);if(options.updateURL!==false)history.replaceState(null,'',url);
  }
+ const feedbackPanel=q('.bc-feedback-rail'),feedbackContent=q('.bc-feedback-content');
+ let feedbackOpen=false,feedbackHandle,feedbackTask,cameraBefore,minZoomBefore,restoreRotation=false,restoreFlow=false;
+ async function openFeedback(event){
+  event.preventDefault();if(feedbackOpen)return;feedbackOpen=true;showDetail(null);
+  const state=scene.getState();restoreRotation=state.rotating;restoreFlow=!state.paused;
+  if(restoreRotation)scene.toggleRotation();if(restoreFlow)scene.togglePause();
+  minZoomBefore=scene.map.getMinZoom();
+  cameraBefore={center:scene.map.getCenter().toArray(),zoom:scene.map.getZoom(),pitch:scene.map.getPitch(),bearing:scene.map.getBearing(),padding:scene.map.getPadding()};
+  scene.setFeedbackMode(true);q('.bc-stage').setAttribute('aria-label','Market feedback map');q('.bc-map').setAttribute('aria-label','Select a market or location on the two-dimensional map.');container.classList.add('bc-feedback-open');feedbackPanel.setAttribute('aria-hidden','false');scene.resize();
+  q('.bc-sidebar').inert=true;scene.map.dragRotate.disable();scene.map.touchPitch.disable();scene.map.touchZoomRotate.disableRotation();
+  scene.map.setMinZoom(7);
+  scene.map.fitBounds([[103.59,1.19],[104.09,1.49]],{maxZoom:10.5,pitch:0,bearing:0,padding:{top:35,bottom:35,left:24,right:feedbackPanel.getBoundingClientRect().width+24},duration:reduced.matches?0:750});
+  if(feedbackHandle){
+   const brandSelect=feedbackContent.querySelector('[name=vendor_id]');if(brandSelect&&brandSelect.value!==selected.id){brandSelect.value=selected.id;brandSelect.dispatchEvent(new Event('change'));}
+   feedbackHandle.setActive(true);return;
+  }
+  if(!feedbackTask){
+   feedbackContent.textContent='Opening the questionnaire…';
+   feedbackTask=mountFeedback(feedbackContent,{runtime,sharedMap:scene.map,mapboxToken:options.mapboxToken,onClose:closeFeedback}).then(handle=>{
+    feedbackHandle=handle;handle.setActive(feedbackOpen);
+    const requestedBrand=feedbackContent.querySelector('[name=vendor_id]');if(requestedBrand)requestedBrand.value=selected.id;
+   }).catch(error=>{feedbackContent.textContent='The questionnaire could not open. '+error.message;feedbackTask=null;});
+  }
+  await feedbackTask;
+ }
+ function closeFeedback(){
+  if(!feedbackOpen)return;feedbackOpen=false;feedbackHandle?.setActive(false);
+  container.classList.remove('bc-feedback-open');feedbackPanel.setAttribute('aria-hidden','true');q('.bc-sidebar').inert=false;scene.resize();
+  scene.setFeedbackMode(false);q('.bc-stage').setAttribute('aria-label','Three-dimensional brand connections');q('.bc-map').setAttribute('aria-label','Drag to pan. Right-drag to rotate the three-dimensional map.');scene.map.dragRotate.enable();scene.map.touchPitch.enable();scene.map.touchZoomRotate.enableRotation();
+  scene.map.setMinZoom(minZoomBefore);scene.map.easeTo({...cameraBefore,duration:reduced.matches?0:750});
+  if(restoreRotation)scene.toggleRotation();if(restoreFlow)scene.togglePause();q('.bc-feedback-entry').focus();
+ }
+ q('.bc-feedback-entry').addEventListener('click',openFeedback,{signal:abort.signal});
+ container.addEventListener('keydown',event=>{if(feedbackOpen&&event.key==='Escape'){event.preventDefault();closeFeedback();}},{signal:abort.signal});
  q('.bc-replay').addEventListener('click',()=>scene.replay(),{signal:abort.signal});q('.bc-pause').addEventListener('click',()=>scene.togglePause(),{signal:abort.signal});q('.bc-fit').addEventListener('click',()=>scene.fit(),{signal:abort.signal});
  q('.bc-orbit').addEventListener('click',()=>scene.toggleRotation(),{signal:abort.signal});
  reduced.addEventListener('change',e=>scene.setReducedMotion(e.matches),{signal:abort.signal});
  q('.bc-about').addEventListener('click',()=>q('dialog').showModal(),{signal:abort.signal});q('.bc-dialog-close').addEventListener('click',()=>q('dialog').close(),{signal:abort.signal});
  q('dialog').addEventListener('click',e=>{if(e.target===q('dialog')){const r=q('dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)q('dialog').close();}},{signal:abort.signal});
  const requested=decodeURIComponent(location.hash.replace(/^#brand=/,''));select(brands.find(b=>b.id===options.initialBrand)?.id||brands.find(b=>b.id===requested)?.id||brands.find(b=>b.name==='The Original Vadai')?.id||brands[0].id);
- return {setBrand:select,resize:()=>scene.resize(),destroy(){abort.abort();scene.destroy();container.replaceChildren();container.classList.remove('bc-root');},getState:()=>({brand:selected.id,...scene.getState()}),map:scene.map};
+ return {setBrand:select,resize:()=>scene.resize(),destroy(){feedbackHandle?.destroy();abort.abort();scene.destroy();container.replaceChildren();container.classList.remove('bc-root');},getState:()=>({brand:selected.id,...scene.getState()}),map:scene.map};
 }

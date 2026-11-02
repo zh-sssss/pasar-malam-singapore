@@ -1,14 +1,19 @@
 import {areaAt,marketTiming} from './model.js';
 
-export function createFeedbackMap(container,{context,mapboxToken,onMarket,onPin,onArea,onNotice}){
- const map=new mapboxgl.Map({container,accessToken:mapboxToken,style:'mapbox://styles/mapbox/light-v11',center:[103.82,1.35],zoom:10.5,pitch:28,bearing:-12,antialias:true,minZoom:9,maxZoom:17,attributionControl:true});
- map.addControl(new mapboxgl.NavigationControl(),'bottom-right');
+export function createFeedbackMap(container,{context,mapboxToken,sharedMap,onMarket,onPin,onArea,onNotice}){
+ const map=sharedMap||new mapboxgl.Map({container,accessToken:mapboxToken,style:'mapbox://styles/mapbox/light-v11',center:[103.82,1.35],zoom:10.5,pitch:28,bearing:-12,antialias:true,minZoom:9,maxZoom:17,attributionControl:true});
+ if(!sharedMap)map.addControl(new mapboxgl.NavigationControl(),'bottom-right');
+ let active=true;
+ const layers=['area-hit','selected-areas','area-outlines','recorded-markets','selected-pin-halo','selected-pin'];
+ const sources=['planning-areas','recorded-markets','selected-pin'];
  let mode='report',selection={siteIds:[],areas:[],pin:null},ready=false;
  const timing=marketTiming(context);
  const sites=context.sites.filter(s=>Number.isFinite(s.longitude)&&Number.isFinite(s.latitude));
  const collection={type:'FeatureCollection',features:sites.map(s=>({type:'Feature',properties:{site_id:s.site_id,name:s.name,...timing.get(s.site_id)},geometry:{type:'Point',coordinates:[s.longitude,s.latitude]}}))};
  const popup=new mapboxgl.Popup({closeButton:false,closeOnClick:false,offset:12});
  function paint(){if(!ready)return;
+  for(const id of layers)map.setLayoutProperty(id,'visibility',active?'visible':'none');
+  if(!active){popup.remove();return;}
   const selected=['in',['get','site_id'],['literal',selection.siteIds]];
   const preference=mode!=='report';
   map.setFilter('recorded-markets',preference?null:['==',['get','pastOrOngoing'],true]);
@@ -20,7 +25,8 @@ export function createFeedbackMap(container,{context,mapboxToken,onMarket,onPin,
   map.getSource('selected-pin').setData({type:'FeatureCollection',features:selection.pin?[{type:'Feature',properties:{},geometry:{type:'Point',coordinates:selection.pin}}]:[]});
   map.setLayoutProperty('area-outlines','visibility',mode==='areas'?'visible':'none');
  }
- map.on('load',()=>{
+ function install(){
+  if(!sharedMap){
   for(const layer of map.getStyle().layers){
    if(layer.type==='background')map.setPaintProperty(layer.id,'background-color','#f2e8cc');
    if(layer.type==='fill'&&/^water($|-)/.test(layer.id))map.setPaintProperty(layer.id,'fill-color','#b7cfe0');
@@ -29,6 +35,7 @@ export function createFeedbackMap(container,{context,mapboxToken,onMarket,onPin,
   }
   map.addSource('countries',{type:'vector',url:'mapbox://mapbox.country-boundaries-v1'});
   map.addLayer({id:'plain-neighbours',type:'fill',source:'countries','source-layer':'country_boundaries',filter:['all',['!=',['get','iso_3166_1'],'SG'],['==',['get','disputed'],'false'],['any',['==',['get','worldview'],'all'],['in','US',['get','worldview']]]],paint:{'fill-color':'#f2e8cc'}});
+  }
   map.addSource('planning-areas',{type:'geojson',data:context.areas});
   map.addLayer({id:'area-hit',type:'fill',source:'planning-areas',paint:{'fill-opacity':0}});
   map.addLayer({id:'selected-areas',type:'fill',source:'planning-areas',filter:['in',['get','name'],['literal',[]]],paint:{'fill-color':'#d68865','fill-opacity':.4}});
@@ -39,9 +46,10 @@ export function createFeedbackMap(container,{context,mapboxToken,onMarket,onPin,
   map.addLayer({id:'selected-pin-halo',type:'circle',source:'selected-pin',paint:{'circle-radius':16,'circle-color':'#c66d48','circle-opacity':.2}});
   map.addLayer({id:'selected-pin',type:'circle',source:'selected-pin',paint:{'circle-radius':8,'circle-color':'#ba5f3d','circle-stroke-width':3,'circle-stroke-color':'#fff9ed'}});
   ready=true;paint();
- });
- map.on('click',event=>{
-  if(!ready)return;
+ }
+ if(sharedMap&&map.getStyle()?.layers?.length)install();else map.once('load',install);
+ const click=event=>{
+  if(!ready||!active)return;
   if(mode==='areas'){
    const market=map.queryRenderedFeatures(event.point,{layers:['recorded-markets']})[0];
    if(market){onMarket(sites.find(s=>s.site_id===market.properties.site_id));return;}
@@ -52,14 +60,19 @@ export function createFeedbackMap(container,{context,mapboxToken,onMarket,onPin,
   if(mode==='upcoming'){onNotice('Choose an upcoming market from the list or a highlighted market pin.');return;}
   const point=[Number(event.lngLat.lng.toFixed(6)),Number(event.lngLat.lat.toFixed(6))],area=areaAt(point,context.areas);
   if(area)onPin(point,area);else onNotice('Place the pin on land within Singapore.');
- });
- map.on('mousemove',event=>{
-  if(!ready)return;
+ };
+ const hover=event=>{
+  if(!ready||!active)return;
   const feature=map.queryRenderedFeatures(event.point,{layers:['recorded-markets']})[0];
-  container.style.cursor=feature||mode==='areas'?'pointer':'crosshair';
+  map.getCanvas().style.cursor=feature||mode==='areas'?'pointer':'crosshair';
   if(feature)popup.setLngLat(feature.geometry.coordinates).setText(feature.properties.name).addTo(map);else popup.remove();
- });
- map.on('error',()=>onNotice('Some map detail is unavailable. You can still choose recorded markets from the list.'));
- const observer=new ResizeObserver(()=>map.resize());observer.observe(container);
- return {map,setMode(value){mode=value;paint();},setSelection(value){selection=value;paint();},focus(coordinates){map.flyTo({center:coordinates,zoom:13,pitch:28,duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:750});},fit(){map.flyTo({center:[103.82,1.35],zoom:10.5,pitch:28,bearing:-12,duration:700});},destroy(){observer.disconnect();popup.remove();map.remove();}};
+ };
+ const error=()=>onNotice('Some map detail is unavailable. You can still choose recorded markets from the list.');
+ map.on('click',click);map.on('mousemove',hover);map.on('error',error);
+ const observer=sharedMap?null:new ResizeObserver(()=>map.resize());observer?.observe(container);
+ return {map,setActive(value){active=value;paint();},setMode(value){mode=value;paint();},setSelection(value){selection=value;paint();},focus(coordinates){map.flyTo({center:coordinates,zoom:13,pitch:sharedMap?0:28,bearing:sharedMap?0:-12,duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:750});},fit(){if(sharedMap){map.fitBounds([[103.59,1.19],[104.09,1.49]],{maxZoom:10.5,pitch:0,bearing:0,padding:map.getPadding(),duration:700});return;}map.flyTo({center:[103.82,1.35],zoom:10.5,pitch:sharedMap?0:28,bearing:sharedMap?0:-12,duration:700});},destroy(){
+  observer?.disconnect();popup.remove();map.off('load',install);map.off('click',click);map.off('mousemove',hover);map.off('error',error);
+  if(sharedMap){for(const id of layers)if(map.getLayer(id))map.removeLayer(id);for(const id of sources)if(map.getSource(id))map.removeSource(id);}
+  else map.remove();
+ }};
 }

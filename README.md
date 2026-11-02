@@ -43,7 +43,10 @@ browser resources remain readable as required for rendering the website.
 
 ## Community feedback
 
-The Interactive button opens two map-based forms under `brand-connections/feedback/`.
+The right-edge "Share a stall. Suggest a spot." arrow switches the existing
+brand map into a flat feedback view and slides in a right-hand questionnaire.
+The brand rail is hidden; Back restores the original brand camera and controls.
+The standalone route remains `brand-connections/feedback/`.
 The hosted deployment is https://singapore-night-market-atlas.ushahidi.io/.
 Brand/location contributions and vendor preferences use separate moderated surveys.
 Optional photos are resized/re-encoded locally. Only editor-published location

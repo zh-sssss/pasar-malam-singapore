@@ -15,10 +15,10 @@ export async function mountFeedback(container,options={}){
  const upcoming=upcomingSites(context),located=context.sites.filter(s=>Number.isFinite(s.longitude)&&Number.isFinite(s.latitude));
  const timing=marketTiming(context),discoverySites=located.filter(site=>timing.get(site.site_id)?.pastOrOngoing);
  const state={page:null,kind:null,preferenceScope:null,location:null,marketIds:[],areas:[],photo:null,preview:null,busy:false};
- container.className='fb-root';container.innerHTML=`
+ container.classList.add('fb-root');if(options.sharedMap)container.classList.add('fb-shared');container.innerHTML=`
  <header class="fb-header"><a class="fb-back" href="../">↖ Back to the brand map</a><span class="fb-chapter">A MAP MADE TOGETHER</span></header>
  <div class="fb-layout"><section class="fb-sheet" aria-label="Community feedback">
-  <div class="fb-intro"><span class="fb-kicker">YOUR NEXT MARKET STORY</span><h1>Found a new stall?<br>Put it on the map<span>.</span></h1><p>Know a stall we missed, or a place you would love to trade? Tell us in a minute.</p></div>
+  <div class="fb-intro"><span class="fb-kicker">YOUR NEXT MARKET STORY</span><h1>Share a stall<span>.</span><br>Suggest a spot<span>.</span></h1><p>Know a stall we missed, or a place you would love to trade? Tell us in a minute.</p></div>
   <div class="fb-entry-tabs" role="group" aria-label="Choose a feedback form"><button type="button" data-page="report" aria-pressed="false"><strong>＋ Share a discovery</strong><small>For customers & vendors</small></button><button type="button" data-page="preference" aria-pressed="false"><strong>↗ Pick your next stop</strong><small>For vendors</small></button></div>
   <p class="fb-preview" hidden>Preview · submissions are not open yet. You can explore and fill in the form; nothing is sent or saved.</p>
   <p class="fb-start-note">Choose one of the two options above to get started.</p><form class="fb-form" hidden>
@@ -49,6 +49,13 @@ export async function mountFeedback(container,options={}){
  </section>
  <section class="fb-map-panel" aria-label="Choose locations on the map"><div class="fb-map"></div><div class="fb-map-top"><span class="fb-map-instruction">Tap a market or drop a pin</span><button type="button" class="fb-map-fit">↗ View all</button></div><div class="fb-map-note" role="status"></div><div class="fb-map-key"><span><i class="fb-dot"></i><span class="fb-market-key-label">Past / ongoing market</span></span><span class="fb-muted-key" hidden><i class="fb-dot fb-muted-dot"></i> Past / ongoing or date uncertain</span><span><i class="fb-dot fb-selected-dot"></i> Your selection</span><small class="fb-map-count"></small></div></section></div>`;
  const q=s=>container.querySelector(s);
+ if(options.onClose){
+  container.addEventListener('click',event=>{if(event.target.closest('.fb-back,.fb-success a')){event.preventDefault();options.onClose();}},{signal:abort.signal});
+ }
+ if(options.sharedMap){
+  q('.fb-sheet').prepend(q('.fb-map-top'),q('.fb-map-note'));
+  q('.fb-sheet').append(q('.fb-map-key'));
+ }
  for(const brand of brands){const option=element('option',brand.name);option.value=brand.id;q('[name=vendor_id]').append(option);}
  for(const category of CATEGORIES){const option=element('option',category);option.value=category;q('[name=category]').append(option);}
  for(const site of [...discoverySites].sort((a,b)=>a.name.localeCompare(b.name))){const option=element('option',site.name);option.value=site.site_id;q('[name=market_picker]').append(option);}
@@ -88,7 +95,7 @@ export async function mountFeedback(container,options={}){
   for(const button of q('.fb-upcoming').querySelectorAll('button'))button.setAttribute('aria-pressed',String(state.marketIds.includes(button.dataset.id)));
   q('.fb-area-chips').replaceChildren(...state.areas.map(name=>{const button=element('button',name+' ×','fb-chip');button.type='button';button.setAttribute('aria-label','Remove '+name);button.onclick=()=>chooseArea(name);return button;}));highlight();progress();notice('Your selected markets and planning areas are highlighted.');
  }
- map=createFeedbackMap(q('.fb-map'),{context,mapboxToken:options.mapboxToken,onMarket:chooseMarket,onPin(coordinates,area){if(!reportReady()){notice('Answer the questions on the left before placing a pin.');return;}state.location={kind:'pin',coordinates,label:'New pin in '+area};q('[name=market_picker]').value='';renderLocation();},onArea:chooseArea,onNotice:notice});
+ map=createFeedbackMap(q('.fb-map'),{context,mapboxToken:options.mapboxToken,sharedMap:options.sharedMap,onMarket:chooseMarket,onPin(coordinates,area){if(!reportReady()){notice('Answer the questions on the left before placing a pin.');return;}state.location={kind:'pin',coordinates,label:'New pin in '+area};q('[name=market_picker]').value='';renderLocation();},onArea:chooseArea,onNotice:notice});
  if(!upcoming.length)q('.fb-upcoming').append(element('p','There are no future start dates left in this snapshot. You can still choose planning areas.','fb-help'));
  for(const site of upcoming){const button=element('button',undefined,'fb-upcoming-card');button.type='button';button.dataset.id=site.site_id;button.setAttribute('aria-pressed','false');button.append(element('strong',site.name),element('small',site.start_date+' → '+(site.end_date||'end date unconfirmed')));button.onclick=()=>chooseMarket(site);q('.fb-upcoming').append(button);}
  function progress(){
@@ -165,5 +172,5 @@ export async function mountFeedback(container,options={}){
   finally{state.busy=false;q('.fb-submit').disabled=!connected;q('.fb-submit').textContent='Submit for review ↗';}
  },{signal:abort.signal});
  q('.fb-report').hidden=true;q('.fb-preference').hidden=true;progress();
- return {destroy(){abort.abort();if(state.preview)URL.revokeObjectURL(state.preview);map.destroy();container.replaceChildren();},getState(){return {page:state.page,kind:state.kind,location:state.location,marketIds:[...state.marketIds],areas:[...state.areas],connected};}};
+ return {setActive:value=>map.setActive(value),destroy(){abort.abort();if(state.preview)URL.revokeObjectURL(state.preview);map.destroy();container.replaceChildren();},getState(){return {page:state.page,kind:state.kind,location:state.location,marketIds:[...state.marketIds],areas:[...state.areas],connected};}};
 }

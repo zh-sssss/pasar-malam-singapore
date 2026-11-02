@@ -91,6 +91,9 @@ def build(local_runtime=None):
     for directory,css in [(chapter,'style.css'),(chapter/'feedback','feedback.css')]:
         path=directory/'index.html'
         html=version_imports(path)
+        if directory==chapter:
+            feedback_version=hashlib.sha256((chapter/'feedback/feedback.css').read_bytes()).hexdigest()[:12]
+            html=html.replace('./feedback/feedback.css','./feedback/feedback.css?v='+feedback_version)
         version=hashlib.sha256((directory/css).read_bytes()).hexdigest()[:12]
         path.write_text(html.replace('./'+css,'./'+css+'?v='+version),encoding='utf-8')
     (chapter/'data').mkdir()

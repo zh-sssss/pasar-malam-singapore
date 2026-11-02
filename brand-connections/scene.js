@@ -82,6 +82,7 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
  }
  const transform=new THREE.Matrix4().makeTranslation(merc.x,merc.y,0).scale(V(unit,-unit,unit)).multiply(new THREE.Matrix4().makeRotationX(Math.PI/2));
  const scene=new THREE.Scene(),camera=new THREE.Camera();scene.add(new THREE.HemisphereLight(0xc4caf0,0xf1e5d5,2.8));const sun=new THREE.DirectionalLight(0xfff1df,2.5);sun.position.set(-1,4,2);scene.add(sun);
+ let feedbackMode=false;
  let renderer,nodes=[],arcs=[],selection=[],progress=1,start=0,paused=false,done=true,disposed=false,layerReady=false,pending=null,lastHovered=null,resizeObserver;
  let rotating=!reducedMotion,rotationFrame,lastFrame=0,rotationAfter=0,flowPhase=0,fadePhase=0,flowLast=0;
  const rotationState=()=>onState?.({progress,paused,done,connections:arcs.length,rotating});
@@ -130,7 +131,7 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
  }
  const layer={id:'brand-network-3d',type:'custom',renderingMode:'3d',onAdd(m,gl){renderer=new THREE.WebGLRenderer({canvas:m.getCanvas(),context:gl,antialias:true});renderer.autoClear=false;renderer.outputColorSpace=THREE.SRGBColorSpace;layerReady=true;if(pending)draw(pending);},
   render(gl,matrix){
-   if(disposed)return;
+   if(disposed||feedbackMode)return;
    const now=performance.now(),flowDt=clamp((now-flowLast)/1000,0,.05);flowLast=now;
    if(!paused&&!reducedMotion){flowPhase=(flowPhase+flowDt*.55)%1;fadePhase=(fadePhase+flowDt/3.2)%1;}
    if(!paused&&!done){progress=clamp((now-start)/1500,0,1);if(progress===1)done=true;onState?.({progress,paused,done,connections:arcs.length});}
@@ -156,16 +157,17 @@ export function createScene(container,{land,mapboxToken,onPick,onState,reducedMo
   if(intersections.length){let o=intersections[0].object;while(o.parent&&o.parent!==meshes)o=o.parent;return nodes.find(n=>n.g===o)?.p;}
   let best=null,d=24;for(const n of nodes){const q=map.project([n.p.longitude,n.p.latitude]),delta=Math.hypot(point.x-q.x,point.y-q.y);if(delta<d){best=n.p;d=delta;}}return best;
  }
- map.on('click',e=>{const p=hit(e.point);onPick?.(p||null);});
- map.on('mousemove',e=>{const p=hit(e.point);container.style.cursor=p?'pointer':'';if(p?.point_id===lastHovered)return;lastHovered=p?.point_id;
+ map.on('click',e=>{if(feedbackMode)return;const p=hit(e.point);onPick?.(p||null);});
+ map.on('mousemove',e=>{if(feedbackMode)return;const p=hit(e.point);container.style.cursor=p?'pointer':'';if(p?.point_id===lastHovered)return;lastHovered=p?.point_id;
   for(const a of arcs){const relevant=!p||a.link.source.point_id===p.point_id||a.link.target.point_id===p.point_id;a.uniforms.uOpacity.value=relevant ? .75 : .08;a.innerUniforms.uOpacity.value=relevant ? a.baseOpacity : .12;a.glowUniforms.uOpacity.value=relevant ? .3 : .035;}map.triggerRepaint();});
- let lastSize='';resizeObserver=new ResizeObserver(()=>{const size=container.clientWidth+'x'+container.clientHeight;if(size===lastSize)return;lastSize=size;map.resize();if(pending)fitPoints(pending,0);});resizeObserver.observe(container);
+ let lastSize='';resizeObserver=new ResizeObserver(()=>{const size=container.clientWidth+'x'+container.clientHeight;if(size===lastSize)return;lastSize=size;map.resize();if(pending&&!feedbackMode)fitPoints(pending,0);});resizeObserver.observe(container);
  return {
+  setFeedbackMode(value){feedbackMode=value;map.triggerRepaint();},
   setPoints(points){pending=points;if(layerReady)draw(points);fitPoints(points);},
   replay(){progress=reducedMotion?1:0;start=performance.now();flowPhase=0;fadePhase=0;flowLast=start;paused=false;done=reducedMotion||!arcs.length;onState?.({progress,paused,done,connections:arcs.length});map.triggerRepaint();},
   togglePause(){paused=!paused;if(!paused){if(!done)start=performance.now()-progress*1500;flowLast=performance.now();}onState?.({progress,paused,done,connections:arcs.length});map.triggerRepaint();},
   fit(){rotationAfter=performance.now()+1900;fitPoints(pending);},
-  resize(){map.resize();},
+  resize(){lastSize=container.clientWidth+'x'+container.clientHeight;map.resize();},
   toggleRotation(){rotating=!rotating;rotationAfter=performance.now();rotationState();return rotating;},
   setReducedMotion(value){reducedMotion=value;for(const a of arcs)a.uniforms.uMotion.value=value?0:1;if(value){rotating=false;progress=1;done=true;paused=false;rotationState();map.triggerRepaint();}},
   destroy(){disposed=true;cancelAnimationFrame(rotationFrame);document.removeEventListener('visibilitychange',wake);resizeObserver.disconnect();map.remove();},
