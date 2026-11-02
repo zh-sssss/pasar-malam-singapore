@@ -1,5 +1,13 @@
 export const CATEGORIES=['Food','Drinks','Desserts & snacks','Clothing','Accessories','Household goods','Services','Other'];
 export const singaporeToday=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Singapore',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+export function marketTiming(context,today=singaporeToday()){
+ const timing=new Map((context.sites||[]).map(site=>[site.site_id,{pastOrOngoing:false,future:false}]));
+ for(const event of context.events||[]){
+  if(event.date_conflict||!/^\d{4}-\d{2}-\d{2}$/.test(event.start_date||''))continue;
+  const item=timing.get(event.site_id);if(item)item[event.start_date>today?'future':'pastOrOngoing']=true;
+ }
+ return timing;
+}
 export function upcomingSites(context,today=singaporeToday()){
  const future=new Map();
  for(const event of context.events||[]){

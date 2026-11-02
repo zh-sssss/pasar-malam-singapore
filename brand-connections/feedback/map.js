@@ -1,18 +1,21 @@
-import {areaAt,upcomingSites} from './model.js';
+import {areaAt,marketTiming} from './model.js';
 
 export function createFeedbackMap(container,{context,mapboxToken,onMarket,onPin,onArea,onNotice}){
  const map=new mapboxgl.Map({container,accessToken:mapboxToken,style:'mapbox://styles/mapbox/light-v11',center:[103.82,1.35],zoom:10.5,pitch:28,bearing:-12,antialias:true,minZoom:9,maxZoom:17,attributionControl:true});
  map.addControl(new mapboxgl.NavigationControl(),'bottom-right');
  let mode='report',selection={siteIds:[],areas:[],pin:null},ready=false;
- const upcomingIds=new Set(upcomingSites(context).map(s=>s.site_id));
+ const timing=marketTiming(context);
  const sites=context.sites.filter(s=>Number.isFinite(s.longitude)&&Number.isFinite(s.latitude));
- const collection={type:'FeatureCollection',features:sites.map(s=>({type:'Feature',properties:{site_id:s.site_id,name:s.name},geometry:{type:'Point',coordinates:[s.longitude,s.latitude]}}))};
+ const collection={type:'FeatureCollection',features:sites.map(s=>({type:'Feature',properties:{site_id:s.site_id,name:s.name,...timing.get(s.site_id)},geometry:{type:'Point',coordinates:[s.longitude,s.latitude]}}))};
  const popup=new mapboxgl.Popup({closeButton:false,closeOnClick:false,offset:12});
  function paint(){if(!ready)return;
   const selected=['in',['get','site_id'],['literal',selection.siteIds]];
-  map.setPaintProperty('recorded-markets','circle-color',['case',selected,'#be6747','#6c9b8a']);
+  const preference=mode!=='report';
+  map.setFilter('recorded-markets',preference?null:['==',['get','pastOrOngoing'],true]);
+  map.setPaintProperty('recorded-markets','circle-color',['case',selected,'#be6747',preference?['case',['==',['get','future'],true],'#6c9b8a','#c4c6c2']:'#6c9b8a']);
   map.setPaintProperty('recorded-markets','circle-radius',['case',selected,9,5]);
   map.setPaintProperty('recorded-markets','circle-stroke-width',['case',selected,4,1.5]);
+  map.setLayoutProperty('recorded-markets','circle-sort-key',['case',selected,2,['==',['get','future'],true],1,0]);
   map.setFilter('selected-areas',['in',['get','name'],['literal',selection.areas]]);
   map.getSource('selected-pin').setData({type:'FeatureCollection',features:selection.pin?[{type:'Feature',properties:{},geometry:{type:'Point',coordinates:selection.pin}}]:[]});
   map.setLayoutProperty('area-outlines','visibility',mode==='areas'?'visible':'none');
@@ -41,7 +44,7 @@ export function createFeedbackMap(container,{context,mapboxToken,onMarket,onPin,
   if(!ready)return;
   if(mode==='areas'){
    const market=map.queryRenderedFeatures(event.point,{layers:['recorded-markets']})[0];
-   if(market&&upcomingIds.has(market.properties.site_id)){onMarket(sites.find(s=>s.site_id===market.properties.site_id));return;}
+   if(market){onMarket(sites.find(s=>s.site_id===market.properties.site_id));return;}
    const name=areaAt([event.lngLat.lng,event.lngLat.lat],context.areas);if(name)onArea(name);else onNotice('Choose a planning area in Singapore.');return;
   }
   const hit=map.queryRenderedFeatures(event.point,{layers:['recorded-markets']})[0];
