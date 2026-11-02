@@ -11,9 +11,11 @@ import gzip
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import urllib.request
+from prepare_feedback_context import context_for
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = 'https://zh-sssss.github.io/pasar-malam-singapore/'
@@ -61,25 +63,41 @@ def build(local_runtime=None):
     land = json.loads((out/'data/planning_areas.geojson').read_text(encoding='utf-8'))
     chapter = out / 'brand-connections'
     chapter.mkdir()
-    for name in ['index.html','app.js','style.css','scene.js','model.js','logos.js']:
+    for name in ['index.html','app.js','style.css','scene.js','model.js','logos.js','community.js','feedback-connection.js']:
         shutil.copy2(ROOT/'brand-connections'/name, chapter/name)
+    (chapter/'feedback').mkdir()
+    for name in ['index.html','app.js','map.js','api.js','model.js','feedback.css']:
+        shutil.copy2(ROOT/'brand-connections/feedback'/name,chapter/'feedback'/name)
+    api_base=os.environ.get('FEEDBACK_API_BASE','')
+    public_url=os.environ.get('USHAHIDI_PUBLIC_URL','')
+    if any(value and not value.startswith('https://') for value in [api_base,public_url]):
+        raise ValueError('Feedback connection URLs must use HTTPS')
+    (chapter/'feedback-connection.js').write_text('export const FEEDBACK_CONNECTION='+json.dumps({'apiBase':api_base,'deploymentUrl':public_url})+';\n',encoding='utf-8')
     # Version module URLs as well as the entrypoint, so published edits do not
     # reuse an older scene from a visitor's browser cache.
-    for name in ['scene.js','app.js']:
-        module = (chapter/name).read_text(encoding='utf-8')
-        for dependency in ['model.js','logos.js','scene.js']:
-            version = hashlib.sha256((chapter/dependency).read_bytes()).hexdigest()[:12]
-            module = module.replace("from './"+dependency+"'", "from './"+dependency+"?v="+version+"'")
-        (chapter/name).write_text(module,encoding='utf-8')
-    html = (chapter/'index.html').read_text(encoding='utf-8')
-    for name in ['app.js','style.css']:
-        version = hashlib.sha256((chapter/name).read_bytes()).hexdigest()[:12]
-        html = html.replace('./'+name, './'+name+'?v='+version)
-    (chapter/'index.html').write_text(html,encoding='utf-8')
+    def version_imports(path):
+        def replace(match):
+            relative=match.group(1)
+            if not relative.startswith('.'):return match.group(0)
+            target=(path.parent/relative).resolve()
+            if not target.is_relative_to(chapter.resolve()):raise ValueError('Unexpected module path')
+            version=hashlib.sha256(target.read_bytes()).hexdigest()[:12]
+            return "from '"+relative+'?v='+version+"'"
+        return re.sub(r"from '([^']+\.js)'",replace,path.read_text(encoding='utf-8'))
+    for name in ['scene.js','community.js','feedback/map.js','feedback/app.js','app.js']:
+        path=chapter/name
+        path.write_text(version_imports(path),encoding='utf-8')
+    for directory,css in [(chapter,'style.css'),(chapter/'feedback','feedback.css')]:
+        path=directory/'index.html'
+        html=version_imports(path)
+        version=hashlib.sha256((directory/css).read_bytes()).hexdigest()[:12]
+        path.write_text(html.replace('./'+css,'./'+css+'?v='+version),encoding='utf-8')
     (chapter/'data').mkdir()
     (chapter/'data/runtime.json').write_text(json.dumps(
         {'as_of':'2026-10-28','points':points,'land':land},
         ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+    market_app=json.loads((out/'data/app.json').read_text(encoding='utf-8'))
+    (chapter/'data/feedback-context.json').write_text(json.dumps(context_for(market_app,land),ensure_ascii=False,separators=(',',':')),encoding='utf-8')
     assert not list(out.rglob('*.csv')) and not list(out.rglob('*.xlsx'))
     assert not list(out.rglob('*.md')) and not list(out.rglob('*.pdf'))
     print(f'Preserved {len(preserved)} public resources; prepared {len(points)} reviewed display points.')

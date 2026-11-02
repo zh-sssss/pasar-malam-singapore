@@ -40,3 +40,17 @@ The ignored `__brand_publish/` folder contains the complete deployable website.
 The `brand-pages.yml` Actions workflow deploys this artifact with one-day Actions
 artifact retention. No analysis export or download control is added. Public
 browser resources remain readable as required for rendering the website.
+
+## Community feedback preview
+
+The Interactive button opens two short map-based forms under `brand-connections/feedback/`.
+While no Ushahidi deployment/bridge is configured, the page is explicitly a preview:
+submission is disabled and nothing is sent or stored. Optional photos are resized
+and re-encoded locally before preview. Current future-site options use Singapore's
+date against the retained announcement snapshot, not the snapshot's old status flag.
+
+The Pages workflow accepts public repository variables `FEEDBACK_API_BASE` and
+`USHAHIDI_PUBLIC_URL` only after the team configures and verifies the moderated
+backend in the group branch's `feedback-backend/README.md`. Never put administrator
+credentials in repository variables or browser code. Runtime market context is
+prepared at build time; raw research inputs remain outside Git.

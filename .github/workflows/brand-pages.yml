@@ -5,6 +5,7 @@ on:
     paths:
       - 'brand-connections/**'
       - 'scripts/prepare_brand_publication.py'
+      - 'scripts/prepare_feedback_context.py'
       - '.github/workflows/brand-pages.yml'
   workflow_dispatch:
 permissions:
@@ -26,6 +27,8 @@ jobs:
       - name: Prepare reviewed publication without committing runtime data
         env:
           BRAND_DISPLAY_POINTS_GZIP: ${{ vars.BRAND_DISPLAY_POINTS_GZIP }}
+          FEEDBACK_API_BASE: ${{ vars.FEEDBACK_API_BASE }}
+          USHAHIDI_PUBLIC_URL: ${{ vars.USHAHIDI_PUBLIC_URL }}
         run: python scripts/prepare_brand_publication.py
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Share a market story · Singapore Brand Atlas</title>
+<meta name="description" content="Add a missing pasar malam brand or location, or share where you would like to trade.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.css" rel="stylesheet">
+<link href="./feedback.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.js"></script>
+</head><body><main id="feedback"><p class="fb-loading">Opening the community map…</p></main>
+<script src="../../mapbox-config.js"></script>
+<script type="module">
+import {mountFeedback} from './app.js';
+import {FEEDBACK_CONNECTION} from '../feedback-connection.js';
+const config={mapboxToken:window.MAPBOX_CONFIG?.accessToken};
+mountFeedback(document.querySelector('#feedback'),{...config,...FEEDBACK_CONNECTION}).catch(error=>{
+ const p=document.createElement('p');p.className='fb-loading';p.textContent='The feedback map could not open. '+error.message;document.querySelector('#feedback').replaceChildren(p);
+});
+</script></body></html>
