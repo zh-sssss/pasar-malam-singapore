@@ -1,4 +1,7 @@
-export async function submitFeedback(apiBase,payload,photo,{signal}={}){
+import {submitToUshahidi} from '../ushahidi.js';
+export async function submitFeedback(connection,payload,photo,{signal}={}){
+ if(connection?.transport==='ushahidi-guest')return submitToUshahidi(connection,payload,photo,{signal});
+ const apiBase=typeof connection==='string'?connection:connection?.apiBase;
  if(!apiBase)throw new Error('Submissions are not open yet. No information has been sent.');
  const form=new FormData();form.set('submission',JSON.stringify(payload));if(photo)form.set('photo',photo,'stall-photo.jpg');
  const response=await fetch(apiBase.replace(/\/$/,'')+'/submissions',{method:'POST',body:form,signal});

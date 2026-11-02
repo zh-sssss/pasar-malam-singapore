@@ -16,6 +16,7 @@ from pathlib import Path
 import shutil
 import urllib.request
 from prepare_feedback_context import context_for
+from prepare_ushahidi_connection import prepare as prepare_ushahidi
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = 'https://zh-sssss.github.io/pasar-malam-singapore/'
@@ -63,7 +64,7 @@ def build(local_runtime=None):
     land = json.loads((out/'data/planning_areas.geojson').read_text(encoding='utf-8'))
     chapter = out / 'brand-connections'
     chapter.mkdir()
-    for name in ['index.html','app.js','style.css','scene.js','model.js','logos.js','community.js','feedback-connection.js']:
+    for name in ['index.html','app.js','style.css','scene.js','model.js','logos.js','community.js','feedback-connection.js','ushahidi.js']:
         shutil.copy2(ROOT/'brand-connections'/name, chapter/name)
     (chapter/'feedback').mkdir()
     for name in ['index.html','app.js','map.js','api.js','model.js','feedback.css']:
@@ -84,7 +85,7 @@ def build(local_runtime=None):
             version=hashlib.sha256(target.read_bytes()).hexdigest()[:12]
             return "from '"+relative+'?v='+version+"'"
         return re.sub(r"from '([^']+\.js)'",replace,path.read_text(encoding='utf-8'))
-    for name in ['scene.js','community.js','feedback/map.js','feedback/app.js','app.js']:
+    for name in ['scene.js','community.js','feedback/map.js','feedback/api.js','feedback/app.js','app.js']:
         path=chapter/name
         path.write_text(version_imports(path),encoding='utf-8')
     for directory,css in [(chapter,'style.css'),(chapter/'feedback','feedback.css')]:
@@ -93,6 +94,8 @@ def build(local_runtime=None):
         version=hashlib.sha256((directory/css).read_bytes()).hexdigest()[:12]
         path.write_text(html.replace('./'+css,'./'+css+'?v='+version),encoding='utf-8')
     (chapter/'data').mkdir()
+    if not api_base:
+        prepare_ushahidi(chapter/'data')
     (chapter/'data/runtime.json').write_text(json.dumps(
         {'as_of':'2026-10-28','points':points,'land':land},
         ensure_ascii=False,separators=(',',':')),encoding='utf-8')

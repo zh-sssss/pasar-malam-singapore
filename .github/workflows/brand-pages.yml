@@ -6,6 +6,7 @@ on:
       - 'brand-connections/**'
       - 'scripts/prepare_brand_publication.py'
       - 'scripts/prepare_feedback_context.py'
+      - 'scripts/prepare_ushahidi_connection.py'
       - '.github/workflows/brand-pages.yml'
   workflow_dispatch:
 permissions:

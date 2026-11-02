@@ -1,12 +1,16 @@
 import {CATEGORIES,upcomingSites,toggleChoice,validateSubmission} from './model.js';
 import {createFeedbackMap} from './map.js';
 import {preparePhoto,submitFeedback} from './api.js';
+import {loadConnection} from '../ushahidi.js';
+import {loadReviewedPoints} from '../community.js';
 
 const element=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 export async function mountFeedback(container,options={}){
+ options={...options,...await loadConnection(options)};
  const abort=new AbortController();
  const load=async url=>{const r=await fetch(url,{signal:abort.signal});if(!r.ok)throw new Error('The local display context is missing.');return r.json();};
  const [runtime,context]=await Promise.all([options.runtime||load(new URL('../data/runtime.json',import.meta.url)),options.context||load(new URL('../data/feedback-context.json',import.meta.url))]);
+ runtime.points=await loadReviewedPoints(options,runtime.points);
  const brands=[...new Map(runtime.points.map(p=>[p.vendor_id,{id:p.vendor_id,name:p.brand_name}])).values()].sort((a,b)=>a.name.localeCompare(b.name));
  const upcoming=upcomingSites(context),located=context.sites.filter(s=>Number.isFinite(s.longitude)&&Number.isFinite(s.latitude));
  const state={page:'report',kind:'brand',location:null,marketIds:[],areas:[],photo:null,preview:null,busy:false};
@@ -113,7 +117,7 @@ export async function mountFeedback(container,options={}){
   payload.website=String(data.get('website')||'');payload.client_id=crypto.randomUUID();
   const errors=validateSubmission(payload,context,runtime.points);if(errors.length){q('.fb-form-status').textContent=errors[0];return;}
   state.busy=true;q('.fb-submit').disabled=true;q('.fb-submit').textContent='Sending…';q('.fb-form-status').textContent='';
-  try{const result=await submitFeedback(options.apiBase,payload,state.page==='report'?state.photo:null,{signal:abort.signal});q('form').hidden=true;q('.fb-success').hidden=false;q('.fb-entry-tabs').hidden=true;q('.fb-reference').textContent='Reference: '+result.reference;}
+  try{const result=await submitFeedback(options,payload,state.page==='report'?state.photo:null,{signal:abort.signal});q('form').hidden=true;q('.fb-success').hidden=false;q('.fb-entry-tabs').hidden=true;q('.fb-reference').textContent='Reference: '+result.reference;}
   catch(error){if(error.name!=='AbortError')q('.fb-form-status').textContent=error.message;}
   finally{state.busy=false;q('.fb-submit').disabled=!connected;q('.fb-submit').textContent='Submit for review ↗';}
  },{signal:abort.signal});

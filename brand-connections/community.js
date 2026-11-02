@@ -1,4 +1,5 @@
 import {normalizePoints,safeURL} from './model.js';
+import {loadConnection,publishedFromUshahidi} from './ushahidi.js';
 
 export function mergeReviewedPoints(baseline,additions){
  const ids=new Set(baseline.map(p=>p.point_id)),names=new Map(baseline.map(p=>[p.vendor_id,p.brand_name])),result=[...baseline];
@@ -14,8 +15,11 @@ export function mergeReviewedPoints(baseline,additions){
  return result;
 }
 export async function loadReviewedPoints(apiBase,baseline){
- if(!apiBase)return baseline;
  try{
+  const connection=await loadConnection(typeof apiBase==='string'?{apiBase}:apiBase||{});
+  if(connection.transport==='ushahidi-guest')return mergeReviewedPoints(baseline,await publishedFromUshahidi(connection));
+  apiBase=connection.apiBase;
+  if(!apiBase)return baseline;
   const response=await fetch(apiBase.replace(/\/$/,'')+'/published-locations',{signal:AbortSignal.timeout(3500)});
   if(!response.ok)return baseline;
   const payload=await response.json();return mergeReviewedPoints(baseline,payload.points);

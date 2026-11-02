@@ -41,16 +41,22 @@ The `brand-pages.yml` Actions workflow deploys this artifact with one-day Action
 artifact retention. No analysis export or download control is added. Public
 browser resources remain readable as required for rendering the website.
 
-## Community feedback preview
+## Community feedback
 
-The Interactive button opens two short map-based forms under `brand-connections/feedback/`.
-While no Ushahidi deployment/bridge is configured, the page is explicitly a preview:
-submission is disabled and nothing is sent or stored. Optional photos are resized
-and re-encoded locally before preview. Current future-site options use Singapore's
-date against the retained announcement snapshot, not the snapshot's old status flag.
+The Interactive button opens two map-based forms under `brand-connections/feedback/`.
+The hosted deployment is https://singapore-night-market-atlas.ushahidi.io/.
+Brand/location contributions and vendor preferences use separate moderated surveys.
+Optional photos are resized/re-encoded locally. Only editor-published location
+reports enter the atlas on reload; vendor intentions never become store points.
 
-The Pages workflow accepts public repository variables `FEEDBACK_API_BASE` and
-`USHAHIDI_PUBLIC_URL` only after the team configures and verifies the moderated
-backend in the group branch's `feedback-backend/README.md`. Never put administrator
-credentials in repository variables or browser code. Runtime market context is
-prepared at build time; raw research inputs remain outside Git.
+The build runs `scripts/prepare_ushahidi_connection.py` to generate runtime-only
+survey mapping and Ushahidi's official public anonymous-client configuration.
+No administrator credential is used. Configuration and guest tokens are not
+committed. The older optional `FEEDBACK_API_BASE` bridge override is supported;
+without an override, the verified hosted v5 post/media guest connection is used.
+The root website and baseline research records are preserved.
+
+Category/location and 3+3 limits are checked by the website. Ushahidi requires
+editor review. Editors must check reports submitted through other Ushahidi clients
+as well. In Data view, include both new surveys in Filters and select Under review;
+open a report to edit its brand/location fields and Publish or Archive it.
