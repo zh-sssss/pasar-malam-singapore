@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2e9d0">
+  <meta name="description" content="Explore Singapore's 2026 pasar malam announcements, HDB commercial buildings, modelled ODA candidate spaces, community Street Walk views and future-location preferences.">
+  <title>Add market information</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fredoka:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="community.css">
+  <link rel="stylesheet" href="../site/flow.css">
+  <script defer src="https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.js"></script>
+  <script defer src="website-config.js"></script>
+  <script defer src="mapbox-config.js"></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body data-start-tab="community">
+  <div id="map" aria-label="Interactive map of Singapore"></div>
+  <header class="masthead"><a class="chapter-link" href="../site/navigation/index.html" aria-label="Back to Campbell Lane">←<span> Campbell Lane</span></a><button id="methodsOpen" class="quiet">Sources & methods</button></header>
+  <main id="panel" class="panel">
+    <div class="intro"><h1>Beyond the<br><em>yellow lines.</em></h1></div>
+    <div class="filters" id="filters" role="group" aria-label="Date and planning-area filters for distribution and ODA">
+      <div class="date-filter">
+        <span class="filter-label" id="dateLabel">Dates</span>
+        <button type="button" id="dateButton" class="date-button" aria-haspopup="dialog" aria-expanded="false" aria-controls="datePop" aria-describedby="dateLabel"><span id="dateValue">All dates</span><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+        <div id="datePop" class="date-pop" role="dialog" aria-label="Choose a date window" hidden>
+          <div class="cal-presets"><button type="button" id="calAll">All dates</button><button type="button" id="calWholeMonth">Whole month</button></div>
+          <div class="cal-head"><button type="button" id="calPrev" aria-label="Previous month">‹</button><strong id="calTitle" aria-live="polite"></strong><button type="button" id="calNext" aria-label="Next month">›</button></div>
+          <div class="cal-week" aria-hidden="true"><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span></div>
+          <div class="cal-grid" id="calGrid"></div>
+          <p class="cal-hint" id="calHint"><span id="calStep">Pick a start date, then an end date.</span><br>Dots show how many markets run that day: <i class="cal-dot lv1"></i> 1–5 <i class="cal-dot lv2"></i> 6–10 <i class="cal-dot lv3"></i> 11+</p>
+        </div>
+      </div>
+      <label>Planning area<select id="area"><option value="all">All areas</option></select></label>
+    </div>
+    <nav class="tabs" aria-label="Analysis chapters"><button data-tab="distribution" aria-selected="true"><span>01</span> Distribution</button><button data-tab="oda" aria-selected="false"><span>02</span> Potential ODA</button></nav>
+    <div class="panel-scroll" id="panelScroll">
+      <div id="content"><p class="loading">Preparing the island…</p></div>
+    </div>
+
+  </main>
+  <a class="community-entry flow-next" id="communityOpen" href="community.html" aria-label="Add market information"><span class="community-entry-label">Add market<br>information</span><span class="community-entry-arrow" aria-hidden="true">→</span></a>
+  <a class="flow-next flow-continue" id="communityNext" href="../site/brand-connections/index.html" hidden><span>Brands</span><b aria-hidden="true">→</b></a>
+  <aside class="community-rail" id="communityRail" aria-label="Add market information" aria-hidden="true"><button class="back-link" id="communityClose" type="button">← Back to map</button><div id="community-panel"></div></aside>
+  <aside class="map-tools" aria-label="Map controls"><button id="overview" title="Return to Singapore overview">↖ <span>Island overview</span></button><label><input id="areasToggle" type="checkbox"> Planning areas</label></aside>
+  <aside class="legend" id="legend" aria-label="Map legend"></aside>
+  <div class="map-caption"><span id="mapStatus" role="status">Loading…</span></div>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <dialog id="methods"><div class="dialog-head"><button id="methodsClose" aria-label="Close methods">×</button></div><div class="dialog-body"><h2>Sources & methods</h2><p class="lede">An exploratory, island-wide study of announced markets and commercial space. A research sample, not a complete census or live market guide.</p>
+  <details open><summary>What is being counted?</summary><p>The baseline is the frozen v8 research snapshot, as of 23 October 2026. It contains 120 core market episodes at 92 distinct site IDs; 119 episodes have representative coordinates. One site may host several episodes. Programmes, exhibitions, historical comparisons and unadopted procurement leads are not added to the core count.</p><p>“Past” and “within window” describe announced dates relative to the snapshot, not verified operation. Future announcements remain separate. Filters preserve incomplete dates as uncertainty. A date window includes every market whose known date range overlaps it; records whose dates cannot be placed on the calendar are excluded from that window and reported separately.</p></details>
+  <details><summary>Commercial buildings & spatial measures</summary><p>2,525 archived HDB commercial=Y address records are linked to points; 2,524 have official HDB building footprints. These are building addresses, not shop units, ODA permits or a national inventory of all commercial property. The remaining address is point-only and never rendered as a footprint.</p><p>Distances and buffers are computed in SVY21 (EPSG:3414), in metres. Light geometry shows every HDB commercial building. Dark geometry highlights buildings whose footprints are at most 50 m from a filtered market representative point; the point-only record uses point distance. In chapter 02, selecting a market restricts the dark layer to that market. This fixed threshold is a display rule, not a market boundary. No search-radius control is exposed. Earlier sensitivity analyses are retained in the research project, outside the website. Market coordinates are landmark/building proxies, not entrances or surveyed boundaries. A zero distance does not establish physical co-location.</p><p>Planning-area summaries use URA MP2019 boundaries. Commercial address points and market representative points determine area assignment. “No collected market” means no record in this sample, not proven absence.</p></details>
+  <details><summary>How potential ODA is modelled</summary><p>The displayed ODA candidate layer is fixed at 2 m: an external band around each commercial footprint, with all intersecting known HDB footprints subtracted. The archived 1 and 3 m sensitivity outputs remain available for reproducibility. Widths are researcher-selected sensitivity settings, not statutory display depths, observed yellow boxes or confidence intervals. Rounded external corners follow the buffer geometry.</p><p>Archived area metrics are dissolved before summation and clipped to their stated analysis circles. Area metrics are not shown in the market information panel. Different building candidate bands can overlap; the union avoids double counting. Only known HDB footprints are obstacles: roads, non-HDB buildings, property control and other obstructions remain untested. Full-perimeter bands do not identify shopfront direction and can omit covered corridors inside the mapped footprint. Metre-scale shapes are illustrative; source accuracy has not been surveyed.</p><p>The model identifies candidate vicinity only. There are no verified ODA permit geometries and no actual market footprints. No overlap percentage, compliance finding or actual occupied area is calculated.</p><div id="rulesTable"></div></details>
+
+<details><summary>Community contributions & preferences</summary><p>Street Walk profiles combine existing site announcements with user observations. No reconstructed street geometry or imagery is supplied. Photos and YouTube/Vimeo links are optional and require contributor permission. Contributions are published automatically in Ushahidi. Preferences are collected after the brand page in a separate survey. Counts describe submissions, not unique voters or representative demand. Future choices are recalculated from Singapore’s current date; no new announcement collection is implied.</p></details>
+  <details><summary>Sources & attribution</summary><p>Contains information from HDB Existing Building, HDB Property Information and URA Master Plan 2019 Planning Area Boundary, accessed on 23 October 2026 from data.gov.sg, made available under the <a href="https://data.gov.sg/open-data-licence" target="_blank" rel="noopener">Singapore Open Data Licence</a>. This independent study is not endorsed by these agencies. Commercial addresses have archived public address crosschecks retained in the local provenance manifest. Announcements and reported appearances use linked public listings and reports, with row-level source links.</p><p>Only minimal public facts and derived geographic outputs are published. Source HTML, source images, personal contacts, procurement bids and unreviewed media remain outside this website. Third-party rights are retained; the code licence does not relicense underlying data.</p><p>Basemap and 3D context © Mapbox and © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>. Mapbox buildings are visual context, not surveyed market or ODA geometry. Educational research for DEP5118, National University of Singapore. Author: <a href="mailto:zhiheng.shu@u.nus.edu">Zhiheng Shu</a>.</p></details>
+  </div></dialog>
+  <noscript><div class="noscript">JavaScript is needed to view this interactive map.</div></noscript>
+</body></html>

@@ -31,3 +31,9 @@ __pycache__/
 # Publication-only display runtime and local snapshots
 brand-connections/data/
 __brand_publish/
+
+# Integrated preview: generated display resources and local-only configuration
+community/**/data/
+community/**/local-config.js
+community/**/mapbox-config.js
+community/site/navigation/generated/

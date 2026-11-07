@@ -194,7 +194,7 @@ async function init(){
     if(typeof mapboxgl==='undefined')throw new Error('Mapbox GL JS could not load');
     const cfg=window.MAPBOX_CONFIG;if(!cfg?.accessToken?.startsWith('pk.'))throw new Error('Mapbox public token is missing');
     data=await json('data/app.json');data.sites.forEach(s=>siteById.set(s.site_id,s));data.events.forEach(e=>eventById.set(e.event_id,e));
-    map=new mapboxgl.Map({container:'map',accessToken:cfg.accessToken,style:cfg.style,center:[103.82,1.35],zoom:10,pitch:0,bearing:0,minZoom:8.5,maxZoom:20,antialias:true,
+    map=new mapboxgl.Map({language:'en',container:'map',accessToken:cfg.accessToken,style:cfg.style,center:[103.82,1.35],zoom:10,pitch:0,bearing:0,minZoom:8.5,maxZoom:20,antialias:true,
       config:{basemap:{theme:'monochrome',lightPreset:'day',show3dObjects:true,showPointOfInterestLabels:false,showTransitLabels:false}}});
     map.addControl(new mapboxgl.NavigationControl({visualizePitch:true}),'bottom-right');map.addControl(new mapboxgl.ScaleControl({unit:'metric'}),'bottom-right');
     map.on('error',e=>{const message=JSON.stringify(e.error,Object.getOwnPropertyNames(e.error||{})).replace(/pk\.[A-Za-z0-9_.-]+/g,'[public token]');console.error('Mapbox:',message);if(/401|403|token|unauthorized/i.test(message))toast('Mapbox access was refused. Check the public token and allowed website URLs.');});

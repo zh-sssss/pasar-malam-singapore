@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'brand-connections/**'
+      - 'community/**'
       - 'scripts/prepare_brand_publication.py'
       - 'scripts/prepare_feedback_context.py'
       - 'scripts/prepare_ushahidi_connection.py'

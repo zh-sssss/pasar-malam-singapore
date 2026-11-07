@@ -30,6 +30,50 @@ FIELDS = ['point_id','vendor_id','brand_name','point_type','location_name',
           'source_group','classification_inferred','event_start','event_end',
           'source_url']
 
+def integrated_preview(out, chapter, points, land, market_app):
+    """Publish code plus the same reviewed display runtime, under /community/."""
+    source = ROOT/'community'
+    if not source.exists():
+        return
+    target = out/'community'
+    for path in source.rglob('*'):
+        if path.is_file() and path.suffix in {'.html','.js','.css','.svg'}:
+            if path.name in {'mapbox-config.js','local-config.js'} or 'data' in path.relative_to(source).parts or 'generated' in path.relative_to(source).parts:
+                raise ValueError('Unexpected runtime or configuration in preview source')
+            destination = target/path.relative_to(source)
+            destination.parent.mkdir(parents=True,exist_ok=True)
+            shutil.copy2(path,destination)
+    maps = target/'nationwide_website'
+    (maps/'data').mkdir()
+    for name in FILES:
+        if name.startswith('data/'):
+            shutil.copy2(out/name,maps/name)
+    # Browser public configuration is generated only in the deployment artifact.
+    shutil.copy2(out/'mapbox-config.js',maps/'mapbox-config.js')
+    (maps/'website-config.js').write_text("window.WEBSITE_CONFIG={dataBaseUrl:new URL('./',location.href).href};\n",encoding='utf-8')
+    brands = target/'site/brand-connections'
+    shutil.copytree(chapter/'data',brands/'data')
+    (brands/'data/runtime.json').write_text(json.dumps({'as_of':'2026-10-28','points':points,'land':land},ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+    token = re.search(r'pk\.[A-Za-z0-9_.-]+',(out/'mapbox-config.js').read_text(encoding='utf-8')).group()
+    (brands/'local-config.js').write_text('export default '+json.dumps({'mapboxToken':token})+';\n',encoding='utf-8')
+    # Cache-bust nested modules and local HTML assets in the published preview.
+    for path in target.rglob('*'):
+        if path.suffix not in {'.js','.html'}:
+            continue
+        def version(match):
+            relative=match.group(2)
+            asset=(path.parent/relative.split('?')[0]).resolve()
+            if not asset.is_relative_to(target.resolve()) or not asset.is_file():
+                return match.group(0)
+            stamp=hashlib.sha256(asset.read_bytes()).hexdigest()[:12]
+            return match.group(1)+relative.split('?')[0]+'?v='+stamp+match.group(3)
+        content=path.read_text(encoding='utf-8')
+        content=re.sub(r"(from\s+['\"])(\.[^'\"]+\.js(?:\?[^'\"]*)?)(['\"])",version,content)
+        if path.suffix=='.html':
+            content=re.sub(r'''((?:src|href)=["'])([^"':]+\.(?:js|css)(?:\?[^"']*)?)(["'])''',version,content)
+        path.write_text(content,encoding='utf-8')
+    print('Prepared isolated /community/ preview; no raw research or original media included.')
+
 def build(local_runtime=None):
     out = ROOT / '__brand_publish'
     if out.exists():
@@ -49,6 +93,9 @@ def build(local_runtime=None):
 
     with ThreadPoolExecutor(max_workers=5) as pool:
         preserved = list(pool.map(preserve, FILES))
+    # Use explicit English for metric scale formatting, regardless of browser language.
+    original_app=out/'app.js'
+    original_app.write_text(original_app.read_text(encoding='utf-8').replace('new mapboxgl.Map({',"new mapboxgl.Map({language:'en',",1),encoding='utf-8')
     (out / '.nojekyll').touch()
     if local_runtime:
         points = json.loads(Path(local_runtime).read_text(encoding='utf-8'))['points']
@@ -104,6 +151,7 @@ def build(local_runtime=None):
         ensure_ascii=False,separators=(',',':')),encoding='utf-8')
     market_app=json.loads((out/'data/app.json').read_text(encoding='utf-8'))
     (chapter/'data/feedback-context.json').write_text(json.dumps(context_for(market_app,land),ensure_ascii=False,separators=(',',':')),encoding='utf-8')
+    integrated_preview(out,chapter,points,land,market_app)
     assert not list(out.rglob('*.csv')) and not list(out.rglob('*.xlsx'))
     assert not list(out.rglob('*.md')) and not list(out.rglob('*.pdf'))
     print(f'Preserved {len(preserved)} public resources; prepared {len(points)} reviewed display points.')

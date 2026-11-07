@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Vote for future markets</title>
+<meta name="description" content="Vote for future pasar malam locations, goods and activities.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.css" rel="stylesheet">
+<link href="../../../nationwide_website/community.css" rel="stylesheet"><link href="../../flow.css" rel="stylesheet"><style>body{margin:0;background:#f2e9d0;font:14px DM Sans,sans-serif;color:#3a322d}#feedback-map{position:fixed;inset:0}#feedback{position:fixed;inset:0 70px 0 auto;width:min(410px,calc(100vw - 105px));box-sizing:border-box;background:#f7f4ee;padding:24px;overflow:auto}h1{font:500 32px Fredoka,sans-serif}</style>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.js"></script>
+</head><body><div id="feedback-map"></div><a class="flow-next" href="../../../index.html"><span>Home</span><b aria-hidden="true">→</b></a><main id="feedback"><p class="fb-loading">Opening the community map…</p></main>
+<script type="module">
+import {mountFeedback} from './app.js';
+import {FEEDBACK_CONNECTION} from '../feedback-connection.js';
+let config={};
+try {config=(await import('../local-config.js')).default;} catch {}
+mountFeedback(document.querySelector('#feedback'),{...config,...FEEDBACK_CONNECTION}).catch(error=>{
+ const p=document.createElement('p');p.className='fb-loading';p.textContent='The feedback map could not open. '+error.message;document.querySelector('#feedback').replaceChildren(p);
+});
+</script></body></html>
