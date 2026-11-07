@@ -17,8 +17,8 @@ def prepare(destination):
     brand = next(f for f in forms if f['name']=='Brand and location contributions')
     preference = next(f for f in forms if f['name']=='Vendor location preferences')
     for form in [brand, preference]:
-        if not form['require_approval'] or not form['hide_author']:
-            raise ValueError('Live moderation and author-hiding must be enabled')
+        if form['require_approval'] or not form['hide_author']:
+            raise ValueError('Automatic publication and author-hiding must be enabled')
     labels = {'payload':'Atlas payload','point':'Location','brand_name':'Brand name',
               'vendor_id':'Canonical brand ID','point_type':'Location type',
               'category':'Shop category','photo':'Shop photo'}
@@ -39,6 +39,6 @@ def prepare(destination):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
-    parser.add_argument('--output',type=Path,default=Path(__file__).resolve().parents[1]/'site/brand-connections/data')
+    parser.add_argument('--output',type=Path,default=Path(__file__).resolve().parents[1]/'brand-connections/data')
     prepare(parser.parse_args().output)
     print('Prepared public guest runtime; no administrator credentials used.')

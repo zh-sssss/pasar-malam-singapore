@@ -42,10 +42,10 @@ export async function mountFeedback(container,options={}){
     <p class="fb-intention-note">This is an expression of interest, not a booking or approval to trade.</p>
    </section>
    <div class="fb-honeypot" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
-   <p class="fb-form-status" role="alert"></p><p class="fb-review-note">A map editor reviews each contribution. Approved brands and locations can appear on the atlas. Your name and email are not required.</p>
-   <button type="submit" class="fb-submit">Submit for review <span>↗</span></button>
+   <p class="fb-form-status" role="alert"></p><p class="fb-review-note">Contributions are published as user submissions. Your name and email are not required.</p>
+   <button type="submit" class="fb-submit">Submit <span>↗</span></button>
   </form>
-  <section class="fb-success" hidden aria-live="polite"><span class="fb-success-mark">✓</span><h2>Thank you for<br>adding your story.</h2><p>Your contribution is awaiting review. It has not been added to the public map yet.</p><p class="fb-reference"></p><a href="../">Back to the brand map ↗</a></section>
+  <section class="fb-success" hidden aria-live="polite"><span class="fb-success-mark">✓</span><h2>Thank you for<br>adding your story.</h2><p>Your contribution has been saved.</p><p class="fb-reference"></p><a href="../">Back to the brand map ↗</a></section>
  </section>
  <section class="fb-map-panel" aria-label="Choose locations on the map"><div class="fb-map"></div><div class="fb-map-top"><span class="fb-map-instruction">Tap a market or drop a pin</span><button type="button" class="fb-map-fit">↗ View all</button></div><div class="fb-map-note" role="status"></div><div class="fb-map-key"><span><i class="fb-dot"></i><span class="fb-market-key-label">Past / ongoing market</span></span><span class="fb-muted-key" hidden><i class="fb-dot fb-muted-dot"></i> Past / ongoing or date uncertain</span><span><i class="fb-dot fb-selected-dot"></i> Your selection</span><small class="fb-map-count"></small></div></section></div>`;
  const q=s=>container.querySelector(s);
@@ -167,9 +167,9 @@ export async function mountFeedback(container,options={}){
   payload.website=String(data.get('website')||'');payload.client_id=crypto.randomUUID();
   const errors=validateSubmission(payload,context,runtime.points);if(errors.length){q('.fb-form-status').textContent=errors[0];return;}
   state.busy=true;q('.fb-submit').disabled=true;q('.fb-submit').textContent='Sending…';q('.fb-form-status').textContent='';
-  try{const result=await submitFeedback(options,payload,state.page==='report'?state.photo:null,{signal:abort.signal});q('form').hidden=true;q('.fb-success').hidden=false;q('.fb-entry-tabs').hidden=true;q('.fb-reference').textContent='Reference: '+result.reference;}
+  try{const result=await submitFeedback(options,payload,state.page==='report'?state.photo:null,{signal:abort.signal});q('form').hidden=true;q('.fb-success').hidden=false;q('.fb-entry-tabs').hidden=true;q('.fb-reference').textContent='Reference: '+result.reference;q('.fb-success p').textContent=result.status==='published'?'Added to the public map.':'Saved. Waiting for public synchronization; do not submit again.';}
   catch(error){if(error.name!=='AbortError')q('.fb-form-status').textContent=error.message;}
-  finally{state.busy=false;q('.fb-submit').disabled=!connected;q('.fb-submit').textContent='Submit for review ↗';}
+  finally{state.busy=false;q('.fb-submit').disabled=!connected;q('.fb-submit').textContent='Submit ↗';}
  },{signal:abort.signal});
  q('.fb-report').hidden=true;q('.fb-preference').hidden=true;progress();
  return {setActive:value=>map.setActive(value),destroy(){abort.abort();if(state.preview)URL.revokeObjectURL(state.preview);map.destroy();container.replaceChildren();},getState(){return {page:state.page,kind:state.kind,location:state.location,marketIds:[...state.marketIds],areas:[...state.areas],connected};}};
